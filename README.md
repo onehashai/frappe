@@ -1,32 +1,16 @@
 <div align="center">
-    <img src=".github/frappe-framework-logo.png" height="150">
+    <img src="https://uploads-ssl.webflow.com/5e53d34464688e6f5960a338/5e53daa73a0dbd1a9393096f_onehashlogo-01-01.svg" height="150">
     <h1>
-        <a href="https://frappe.io">
-            frappe
+        <a href="https://onehash.ai">
+            OneHash
         </a>
     </h1>
     <h3>
-        a web framework with <a href="https://www.youtube.com/watch?v=LOjk3m0wTwg">"batteries included"
+        a web framework with <a href="https://onehash.ai">"batteries included"
     </h3>
-    <h5>
-        it's pronounced - <em>fra-pay</em>
-    </h5>
+   
 </div>
 
-<div align="center">
-    <a href="https://travis-ci.org/frappe/frappe">
-        <img src="https://img.shields.io/travis/frappe/frappe.svg?style=flat-square">
-    </a>
-    <a href='https://frappe.io/docs'>
-        <img src='https://img.shields.io/badge/docs-📖-7575FF.svg?style=flat-square'/>
-    </a>
-	<a href='https://www.codetriage.com/frappe/frappe'>
-		<img src='https://www.codetriage.com/frappe/frappe/badges/users.svg'>
-	</a>
-    <a href='https://coveralls.io/github/frappe/frappe?branch=develop'>
-        <img src='https://coveralls.io/repos/github/frappe/frappe/badge.svg?branch=develop'>
-    </a>
-</div>
 
 
 
@@ -48,7 +32,5 @@ Full-stack web application framework that uses Python and MariaDB on the server 
 ### Website
 
 For details and documentation, see the website
-[https://frappe.io](https://frappe.io)
+[https://onehash.ai](https://onehash.ai)
 
-### License
-This repository has been released under the [MIT License](LICENSE).
