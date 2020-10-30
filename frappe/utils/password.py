@@ -131,7 +131,7 @@ def create_auth_table():
 	frappe.db.create_auth_table()
 
 def encrypt(pwd):
-	if len(pwd) > 100:
+	if len(pwd) > 110:
 		# encrypting > 100 chars will lead to truncation
 		frappe.throw(_('Password cannot be more than 100 characters long'))
 

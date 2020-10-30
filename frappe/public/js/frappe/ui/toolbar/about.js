@@ -1,19 +1,19 @@
 frappe.provide('frappe.ui.misc');
 frappe.ui.misc.about = function() {
 	if(!frappe.ui.misc.about_dialog) {
-		var d = new frappe.ui.Dialog({title: __('onehash')});
+		var d = new frappe.ui.Dialog({title: __('OneHash')});
 
 		$(d.body).html(repl("<div>\
-		<p>"+__("Open Source Applications for the Web")+"</p>  \
+		<p>"+__("All You Need")+"</p>  \
 		<p><i class='fa fa-globe fa-fw'></i>\
 			Website: <a href='https://onehash.ai' target='_blank'>https://onehash.ai</a></p>\
-		<p><i class='fa fa-github fa-fw'></i>\
-			Source: <a href='https://github.com/capvia/onehash' target='_blank'>https://github.com/capvia/onehash</a></p>\
+		<p><i class='fa fa-envelope fa-fw'></i>\
+			Email: <a href='mailto:support@onehash.ai' target='_blank'>support@onehash.ai</a></p>\
 		<hr>\
 		<h4>Installed Apps</h4>\
 		<div id='about-app-versions'>Loading versions...</div>\
 		<hr>\
-		<p class='text-muted'>&copy; onehash and contributors </p> \
+		<p class='text-muted'>&copy; OneHash Inc and contributors </p> \
 		</div>", frappe.app));
 
 		frappe.ui.misc.about_dialog = d;
