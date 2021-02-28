@@ -135,7 +135,7 @@
    "bold": 0, 
    "collapsible": 0, 
    "columns": 0, 
-   "description": "Enter static url parameters here (Eg. sender=ERPNext, username=ERPNext, password=1234 etc.)", 
+   "description": "Enter static url parameters here (Eg. sender=OneHash, username=OneHash, password=1234 etc.)", 
    "fieldname": "parameters", 
    "fieldtype": "Table", 
    "hidden": 0, 

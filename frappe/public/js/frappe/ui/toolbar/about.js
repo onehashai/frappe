@@ -1,27 +1,21 @@
 frappe.provide('frappe.ui.misc');
 frappe.ui.misc.about = function() {
 	if(!frappe.ui.misc.about_dialog) {
-		var d = new frappe.ui.Dialog({title: __('Frappe Framework')});
+		var d = new frappe.ui.Dialog({title: __('OneHash')});
 
 		$(d.body).html(repl("<div>\
-		<p>"+__("Open Source Applications for the Web")+"</p>  \
+		<p>"+__("All You Need")+"</p>  \
 		<p><i class='fa fa-globe fa-fw'></i>\
-			Website: <a href='https://frappeframework.com' target='_blank'>https://frappeframework.com</a></p>\
-		<p><i class='fa fa-github fa-fw'></i>\
-			Source: <a href='https://github.com/frappe' target='_blank'>https://github.com/frappe</a></p>\
-		<p><i class='fa fa-linkedin fa-fw'></i>\
-			Linkedin: <a href='https://linkedin.com/company/frappe-tech' target='_blank'>https://linkedin.com/company/frappe-tech</a></p>\
-		<p><i class='fa fa-facebook fa-fw'></i>\
-			Facebook: <a href='https://facebook.com/erpnext' target='_blank'>https://facebook.com/erpnext</a></p>\
-		<p><i class='fa fa-twitter fa-fw'></i>\
-			Twitter: <a href='https://twitter.com/erpnext' target='_blank'>https://twitter.com/erpnext</a></p>\
+			Website: <a href='https://onehash.ai' target='_blank'>https://onehash.ai</a></p>\
+		<p><i class='fa fa-envelope fa-fw'></i>\
+			Email: <a href='mailto:support@onehash.ai' target='_blank'>support@onehash.ai</a></p>\
 		<hr>\
 		<h4>Installed Apps</h4>\
 		<div id='about-app-versions'>Loading versions...</div>\
 		<hr>\
-		<p class='text-muted'>&copy; Frappe Technologies Pvt. Ltd and contributors </p> \
+		<p class='text-muted'>&copy; OneHash Inc and contributors </p> \
 		</div>", frappe.app));
-
+		
 		frappe.ui.misc.about_dialog = d;
 
 		frappe.ui.misc.about_dialog.on_page_show = function() {
