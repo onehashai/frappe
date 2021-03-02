@@ -384,7 +384,7 @@
   },
   {
    "default": "0",
-   "description": "For more information, <a class=\"text-muted\" href=\"https://erpnext.com/docs/user/manual/en/setting-up/email/linking-emails-to-document\">click here</a>.",
+   "description": "For more information, <a class=\"text-muted\" href=\"https://help.onehash.ai/en/article/how-to-link-emails-to-document-1926vbt/\">click here</a>.",
    "fieldname": "enable_automatic_linking",
    "fieldtype": "Check",
    "label": "Enable Automatic Linking in Documents"
