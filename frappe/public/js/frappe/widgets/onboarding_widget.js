@@ -306,7 +306,7 @@ export default class OnboardingWidget extends Widget {
 	}
 
 	show_video(step) {
-		frappe.help.show_video(step.video_url, step.title);
+		//frappe.help.show_video(step.video_url, step.title);
 		this.mark_complete(step);
 	}
 
