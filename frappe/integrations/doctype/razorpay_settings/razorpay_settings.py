@@ -325,6 +325,48 @@ class RazorpaySettings(Document):
 		except Exception:
 			frappe.log_error(frappe.get_traceback())
 
+	def update_subscription(self, settings, subscription_id, **kwargs):
+		start_date = get_timestamp(kwargs.get('subscription_details').get("start_date")) \
+			if kwargs.get('subscription_details').get("start_date") else None
+
+		subscription_details = {
+			"plan_id": kwargs.get('subscription_details').get("plan_id"),
+			"total_count": kwargs.get('subscription_details').get("billing_frequency"),
+			"customer_notify": kwargs.get('subscription_details').get("customer_notify"),
+			"quantity":kwargs.get('subscription_details').get("quantity")
+		}
+
+		if start_date:
+			subscription_details['start_at'] = cint(start_date)
+
+		if kwargs.get('addons'):
+			convert_rupee_to_paisa(**kwargs)
+			subscription_details.update({
+				"addons": kwargs.get('addons')
+			})
+		# print(subscription_details)
+		try:
+			resp = make_post_request(
+				"https://api.razorpay.com/v1/subscriptions/{0}/".format(subscription_id),
+				auth=(settings.api_key, settings.api_secret), 
+				data=json.dumps(subscription_details),
+				headers={
+					"content-type": "application/json"
+				}
+			)
+			
+			if resp.get('status') == 'authenticated':
+				kwargs['subscription_id'] = resp.get('id')
+				frappe.flags.status = 'updated'
+				return kwargs
+			else:
+				frappe.log_error(str(resp), 'Razorpay Failed while updating subscription')
+
+		except Exception:
+			frappe.log_error(frappe.get_traceback())
+
+
+
 	def verify_signature(self, body, signature, key):
 		key = bytes(key, 'utf-8')
 		body = bytes(body, 'utf-8')
