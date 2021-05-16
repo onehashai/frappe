@@ -4,10 +4,10 @@ __("")
 __('')
 
 // ok: frappe-translation-js-formatting
-__('Welcome {0}, get started with ERPNext in just a few clicks.', [full_name]);
+__('Welcome {0}, get started with OneHash in just a few clicks.', [full_name]);
 
 // ruleid: frappe-translation-js-formatting
-__(`Welcome ${full_name}, get started with ERPNext in just a few clicks.`);
+__(`Welcome ${full_name}, get started with OneHash in just a few clicks.`);
 
 // ok: frappe-translation-js-formatting
 __('This is fine');

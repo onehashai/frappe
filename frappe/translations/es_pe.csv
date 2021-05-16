@@ -100,7 +100,7 @@ Embed image slideshows in website pages.,Presentacion de imágenes incrustadas e
 Enable Incoming,Habilitar entrante,
 Enable Outgoing,Habilitar saliente,
 Enter Form Type,Introduzca Tipo de Formulario,
-"Enter static url parameters here (Eg. sender=ERPNext, username=ERPNext, password=1234 etc.)","Introduzca los parámetros de URL estáticas aquí (Ej. sender = ERPNext , nombre de usuario = ERPNext , contraseña = 1234 etc )",
+"Enter static url parameters here (Eg. sender=OneHash, username=OneHash, password=1234 etc.)","Introduzca los parámetros de URL estáticas aquí (Ej. sender = OneHash , nombre de usuario = OneHash , contraseña = 1234 etc )",
 Enter url parameter for receiver nos,Introduzca el parámetro url para el receptor no,
 Field Description,Descripción del Campo,
 Fieldname which will be the DocType for this link field.,Nombre de campo el cual será el DocType para enlazar el campo.,

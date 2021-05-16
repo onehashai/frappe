@@ -81,7 +81,7 @@ apps/frappe/frappe/public/js/frappe/views/treeview.js +89,{0} Tree,{0} Árbol
 DocType: Communication,Email,Correo electrónico
 apps/frappe/frappe/public/js/frappe/ui/toolbar/awesome_bar.js +127,Help on Search,Ayuda en la búsqueda
 DocType: Web Page,Left,Izquierda
-DocType: SMS Settings,"Enter static url parameters here (Eg. sender=ERPNext, username=ERPNext, password=1234 etc.)","Introduzca los parámetros de URL estáticas aquí (Ej. sender = ERPNext , nombre de usuario = ERPNext , contraseña = 1234 etc )"
+DocType: SMS Settings,"Enter static url parameters here (Eg. sender=OneHash, username=OneHash, password=1234 etc.)","Introduzca los parámetros de URL estáticas aquí (Ej. sender = OneHash , nombre de usuario = OneHash , contraseña = 1234 etc )"
 apps/frappe/frappe/core/doctype/user/user.py +191,Sorry! Sharing with Website User is prohibited.,¡Lo siento! Compartir con los del Sitio Web está prohibido.
 DocType: Custom Script,Script,Guión
 apps/frappe/frappe/custom/doctype/customize_form/customize_form.js +71,Refresh Form,Formulario de actualización

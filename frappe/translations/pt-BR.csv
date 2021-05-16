@@ -771,7 +771,7 @@ apps/frappe/frappe/core/doctype/data_import/exporter.py +100,Leave blank for new
 apps/frappe/frappe/config/website.py +63,List of themes for Website.,Lista dos temas para o site.
 DocType: Activity Log,Logout,Sair
 apps/frappe/frappe/core/page/permission_manager/permission_manager_help.html +26,Permissions at higher levels are Field Level permissions. All Fields have a Permission Level set against them and the rules defined at that permissions apply to the field. This is useful in case you want to hide or make certain field read-only for certain Roles.,As permissões em níveis mais elevados são permissões igualdade. Todos os campos têm um conjunto Nível de Permissão contra eles e as regras definidas em que as permissões se aplicam ao campo. Isso é útil no caso de você querer esconder ou fazer determinado campo somente leitura para certas funções.
-DocType: SMS Settings,"Enter static url parameters here (Eg. sender=ERPNext, username=ERPNext, password=1234 etc.)","Digite os parâmetros da URL estática aqui (por exemplo remetente=ERPNext, usuario=ERPNext, senha=1234, etc)"
+DocType: SMS Settings,"Enter static url parameters here (Eg. sender=OneHash, username=OneHash, password=1234 etc.)","Digite os parâmetros da URL estática aqui (por exemplo remetente=OneHash, usuario=OneHash, senha=1234, etc)"
 apps/frappe/frappe/core/page/permission_manager/permission_manager_help.html +38,"If these instructions where not helpful, please add in your suggestions on GitHub Issues.","Se estas instruções não forem úteis, dê sua sugestão no GitHub."
 apps/frappe/frappe/core/doctype/error_snapshot/error_snapshot.html +32,Error Report,Reportar erro
 apps/frappe/frappe/model/base_document.py +515,Row #{0}:,Linha # {0}:

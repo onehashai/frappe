@@ -1532,7 +1532,7 @@ apps/frappe/frappe/core/doctype/data_import/exporter.py +100,Leave blank for new
 apps/frappe/frappe/config/website.py +63,List of themes for Website.,主題的網站名單。
 DocType: Activity Log,Logout,登出
 apps/frappe/frappe/core/page/permission_manager/permission_manager_help.html +26,Permissions at higher levels are Field Level permissions. All Fields have a Permission Level set against them and the rules defined at that permissions apply to the field. This is useful in case you want to hide or make certain field read-only for certain Roles.,在更高級別的權限是現場級的權限。所有領域都對他們權限級別設置，並在該權限適用於該領域中定義的規則。要隱藏或使某些領域的只讀某些角色，這是在的情況下非常有用。
-DocType: SMS Settings,"Enter static url parameters here (Eg. sender=ERPNext, username=ERPNext, password=1234 etc.)",在這裡輸入靜態URL參數（如稱發件人= ERPNext，用戶名= ERPNext，密碼= 1234等）
+DocType: SMS Settings,"Enter static url parameters here (Eg. sender=OneHash, username=OneHash, password=1234 etc.)",在這裡輸入靜態URL參數（如稱發件人= OneHash，用戶名= OneHash，密碼= 1234等）
 apps/frappe/frappe/core/page/permission_manager/permission_manager_help.html +38,"If these instructions where not helpful, please add in your suggestions on GitHub Issues.",如果這些指示沒有幫助，請加在GitHub Issues提出你的建議。
 DocType: Workflow State,bookmark,書籤
 apps/frappe/frappe/public/js/frappe/views/file/file_view.js +69,Folder name should not include '/' (slash),文件夾名稱不應包含“/”（斜杠）

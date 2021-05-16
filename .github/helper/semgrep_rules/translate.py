@@ -5,15 +5,15 @@ from frappe import _
 
 full_name = "Jon Doe"
 # ok: frappe-translation-python-formatting
-_('Welcome {0}, get started with ERPNext in just a few clicks.').format(full_name)
+_('Welcome {0}, get started with OneHash in just a few clicks.').format(full_name)
 
 # ruleid: frappe-translation-python-formatting
-_('Welcome %s, get started with ERPNext in just a few clicks.' % full_name)
+_('Welcome %s, get started with OneHash in just a few clicks.' % full_name)
 # ruleid: frappe-translation-python-formatting
-_('Welcome %(name)s, get started with ERPNext in just a few clicks.' % {'name': full_name})
+_('Welcome %(name)s, get started with OneHash in just a few clicks.' % {'name': full_name})
 
 # ruleid: frappe-translation-python-formatting
-_('Welcome {0}, get started with ERPNext in just a few clicks.'.format(full_name))
+_('Welcome {0}, get started with OneHash in just a few clicks.'.format(full_name))
 
 
 subscribers = ["Jon", "Doe"]

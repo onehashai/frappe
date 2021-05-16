@@ -747,18 +747,4 @@ export default class ChartWidget extends Widget {
 				}
 			});
 	}
-
-	setup_events() {
-		$(document.body).on('toggleSidebar', () => {
-			this.dashboard_chart && this.dashboard_chart.draw(true);
-		});
-
-		$(document.body).on('toggleListSidebar', () => {
-			this.dashboard_chart && this.dashboard_chart.draw(true);
-		});
-
-		$(document.body).on('toggleFullWidth', () => {
-			this.dashboard_chart && this.dashboard_chart.draw(true);
-		});
-	}
 }
