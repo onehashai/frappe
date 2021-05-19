@@ -1,6 +1,7 @@
 # imports - standard imports
 import os
 import sys
+import shutil
 
 # imports - third party imports
 import click
@@ -9,7 +10,6 @@ import click
 import frappe
 from frappe.commands import get_site, pass_context
 from frappe.exceptions import SiteNotSpecifiedError
-from frappe.installer import _new_site
 
 
 @click.command('new-site')
@@ -31,6 +31,8 @@ def new_site(site, mariadb_root_username=None, mariadb_root_password=None, admin
 			 verbose=False, install_apps=None, source_sql=None, force=None, no_mariadb_socket=False,
 			 install_app=None, db_name=None, db_password=None, db_type=None, db_host=None, db_port=None):
 	"Create a new site"
+	from frappe.installer import _new_site
+
 	frappe.init(site=site, new_site=True)
 
 	_new_site(db_name, site, mariadb_root_username=mariadb_root_username,
@@ -57,6 +59,7 @@ def new_site(site, mariadb_root_username=None, mariadb_root_password=None, admin
 def restore(context, sql_file_path, mariadb_root_username=None, mariadb_root_password=None, db_name=None, verbose=None, install_app=None, admin_password=None, force=None, with_public_files=None, with_private_files=None):
 	"Restore site database from an sql file"
 	from frappe.installer import (
+		_new_site,
 		extract_sql_from_archive,
 		extract_files,
 		is_downgrade,
@@ -145,6 +148,8 @@ def reinstall(context, admin_password=None, mariadb_root_username=None, mariadb_
 	_reinstall(site, admin_password, mariadb_root_username, mariadb_root_password, yes, verbose=context.verbose)
 
 def _reinstall(site, admin_password=None, mariadb_root_username=None, mariadb_root_password=None, yes=False, verbose=False):
+	from frappe.installer import _new_site
+
 	if not yes:
 		click.confirm('This will wipe your database. Are you sure you want to reinstall?', abort=True)
 	try:
@@ -672,10 +677,8 @@ def start_ngrok(context):
 	frappe.init(site=site)
 
 	port = frappe.conf.http_port or frappe.conf.webserver_port
-	public_url = ngrok.connect(port=port, options={
-		'host_header': site
-	})
-	print(f'Public URL: {public_url}')
+	tunnel = ngrok.connect(addr=str(port), host_header=site)
+	print(f'Public URL: {tunnel.public_url}')
 	print('Inspect logs at http://localhost:4040')
 
 	ngrok_process = ngrok.get_ngrok_process()

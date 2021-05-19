@@ -12,6 +12,7 @@ from frappe.modules import scrub
 from frappe.www.printview import get_visible_columns
 import frappe.exceptions
 import frappe.integrations.utils
+from frappe.frappeclient import FrappeClient
 
 class ServerScriptNotEnabled(frappe.PermissionError):
 	pass
@@ -72,6 +73,8 @@ def get_safe_globals():
 			time_format=time_format,
 			format_date=frappe.utils.data.global_date_format,
 			form_dict=getattr(frappe.local, 'form_dict', {}),
+			bold=frappe.bold,
+			copy_doc=frappe.copy_doc,
 
 			get_meta=frappe.get_meta,
 			get_doc=frappe.get_doc,
@@ -102,8 +105,10 @@ def get_safe_globals():
 			make_post_request = frappe.integrations.utils.make_post_request,
 			socketio_port=frappe.conf.socketio_port,
 			get_hooks=frappe.get_hooks,
-			sanitize_html=frappe.utils.sanitize_html
+			sanitize_html=frappe.utils.sanitize_html,
+			log_error=frappe.log_error
 		),
+		FrappeClient=FrappeClient,
 		style=frappe._dict(
 			border_color='#d1d8dd'
 		),
@@ -289,7 +294,10 @@ VALID_UTILS = (
 "strip",
 "to_markdown",
 "md_to_html",
+"markdown",
 "is_subset",
 "generate_hash",
-"formatdate"
+"formatdate",
+"get_user_info_for_avatar",
+"get_abbr"
 )

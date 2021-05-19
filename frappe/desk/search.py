@@ -6,8 +6,7 @@ from __future__ import unicode_literals
 import frappe, json
 from frappe.utils import cstr, unique, cint
 from frappe.permissions import has_permission
-from frappe.handler import is_whitelisted
-from frappe import _
+from frappe import _, is_whitelisted
 from six import string_types
 import re
 import wrapt
@@ -80,13 +79,15 @@ def search_widget(doctype, txt, query=None, searchfield=None, start=0,
 			is_whitelisted(frappe.get_attr(query))
 			frappe.response["values"] = frappe.call(query, doctype, txt,
 				searchfield, start, page_length, filters, as_dict=as_dict)
-		except Exception as e:
+		except frappe.exceptions.PermissionError as e:
 			if frappe.local.conf.developer_mode:
 				raise e
 			else:
 				frappe.respond_as_web_page(title='Invalid Method', html='Method not found',
 				indicator_color='red', http_status_code=404)
 			return
+		except Exception as e:
+			raise e
 	elif not query and doctype in standard_queries:
 		# from standard queries
 		search_widget(doctype, txt, standard_queries[doctype][0],

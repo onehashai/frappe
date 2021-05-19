@@ -56,6 +56,7 @@ def application(request):
 		frappe.recorder.record()
 		frappe.monitor.start()
 		frappe.rate_limiter.apply()
+		frappe.api.validate_auth()
 
 		if request.method == "OPTIONS":
 			response = Response()
@@ -128,6 +129,8 @@ def init_request(request):
 	if frappe.local.conf.get('maintenance_mode'):
 		frappe.connect()
 		raise frappe.SessionStopped('Session Stopped')
+	else:
+		frappe.connect(set_admin_as_user=False)
 
 	make_form_dict(request)
 
@@ -181,6 +184,9 @@ def make_form_dict(request):
 	else:
 		args = request.form or request.args
 
+	if not isinstance(args, dict):
+		frappe.throw("Invalid request arguments")
+
 	try:
 		frappe.local.form_dict = frappe._dict({ k:v[0] if isinstance(v, (list, tuple)) else v \
 			for k, v in iteritems(args) })
@@ -195,12 +201,20 @@ def handle_exception(e):
 	response = None
 	http_status_code = getattr(e, "http_status_code", 500)
 	return_as_message = False
+	accept_header = frappe.get_request_header("Accept") or ""
+	respond_as_json = (
+		frappe.get_request_header('Accept')
+		and (frappe.local.is_ajax or 'application/json' in accept_header)
+		or (
+			frappe.local.request.path.startswith("/api/") and not accept_header.startswith("text")
+		)
+	)
 
 	if frappe.conf.get('developer_mode'):
 		# don't fail silently
 		print(frappe.get_traceback())
 
-	if frappe.get_request_header('Accept') and (frappe.local.is_ajax or 'application/json' in frappe.get_request_header('Accept')):
+	if respond_as_json:
 		# handle ajax responses first
 		# if the request is ajax, send back the trace or error message
 		response = frappe.utils.response.report_error(http_status_code)

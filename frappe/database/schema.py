@@ -30,6 +30,9 @@ class DBTable:
 		self.get_columns_from_docfields()
 
 	def sync(self):
+		if self.meta.get('is_virtual'):
+			# no schema to sync for virtual doctypes
+			return
 		if self.is_new():
 			self.create()
 		else:
@@ -272,8 +275,11 @@ class DbColumn:
 				return True
 
 			else:
-				# NOTE float() raise ValueError when "" or None is passed
-				return float(current_def['default'])!=float(self.default)
+				try:
+					# NOTE float() raise ValueError when "" or None is passed
+					return float(current_def['default'])!=float(self.default)
+				except ValueError:
+					return False
 		except TypeError:
 			return True
 
