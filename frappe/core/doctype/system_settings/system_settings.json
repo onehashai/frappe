@@ -457,7 +457,7 @@
    "label": "Prepared Report"
   },
   {
-   "default": "Frappe",
+   "default": "OneHash",
    "description": "The application name will be used in the Login page.",
    "fieldname": "app_name",
    "fieldtype": "Data",
