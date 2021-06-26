@@ -137,7 +137,7 @@ export default class ChartWidget extends Widget {
 				options: frappe.dashboard_utils.get_years_since_creation(frappe.boot.user.creation),
 				action: selected_item => {
 					this.selected_heatmap_year = selected_item;
-					this.save_chart_config_for_user({'heatmap_year': this.selected_heatmap_year});
+					this.save_chart_config_for_user({ 'heatmap_year': this.selected_heatmap_year });
 					this.fetch_and_update_chart();
 				}
 			}];
@@ -150,7 +150,7 @@ export default class ChartWidget extends Widget {
 					class: 'time-interval-filter',
 					action: selected_item => {
 						this.selected_time_interval = selected_item;
-						this.save_chart_config_for_user({'time_interval': this.selected_time_interval});
+						this.save_chart_config_for_user({ 'time_interval': this.selected_time_interval });
 						this.fetch_and_update_chart();
 					}
 				},
@@ -205,6 +205,21 @@ export default class ChartWidget extends Widget {
 			to_date: this.selected_to_date || this.chart_settings.to_date,
 			heatmap_year: this.selected_heatmap_year || this.chart_settings.heatmap_year,
 		};
+
+		// Kuber: Drill-down Correction For Manual Timespan Input
+		if (this.args.from_date && this.args.to_date && this.args.timespan !== "Select Date Range") {
+			this.args.timespan = "Select Date Range";
+			let days = (new Date(this.args.to_date) - new Date(this.args.from_date)) / (1000 * 3600 * 24);
+			if (days > 360) {
+				this.args.time_interval = 'Quarterly';
+			} else if (days > 80) {
+				this.args.time_interval = 'Monthly';
+			} else if (days > 25) {
+				this.args.time_interval = 'Weekly';
+			} else if (days > 6) {
+				this.args.time_interval = 'Daily';
+			}
+		}
 
 		this.fetch(this.filters, true, this.args).then(data => {
 			if (this.chart_doc.chart_type == "Report") {
@@ -410,12 +425,12 @@ export default class ChartWidget extends Widget {
 		let dialog = new frappe.ui.Dialog({
 			title: __("Set Filters for {0}", [this.chart_doc.chart_name]),
 			fields: fields,
-			primary_action: function() {
+			primary_action: function () {
 				let values = this.get_values();
 				if (values) {
 					this.hide();
 					me.filters = values;
-					me.save_chart_config_for_user({'filters': me.filters});
+					me.save_chart_config_for_user({ 'filters': me.filters });
 					me.fetch_and_update_chart();
 				}
 			},
@@ -426,9 +441,9 @@ export default class ChartWidget extends Widget {
 
 		if (this.chart_doc.chart_type == 'Report') {
 			//Set query report object so that it can be used while fetching filter values in the report
-			frappe.query_report = new frappe.views.QueryReport({'filters': dialog.fields_list});
+			frappe.query_report = new frappe.views.QueryReport({ 'filters': dialog.fields_list });
 			frappe.query_reports[this.chart_doc.report_name].onload
-					&& frappe.query_reports[this.chart_doc.report_name].onload(frappe.query_report);
+				&& frappe.query_reports[this.chart_doc.report_name].onload(frappe.query_report);
 		}
 		dialog.set_values(this.filters);
 	}
@@ -442,7 +457,7 @@ export default class ChartWidget extends Widget {
 		this.selected_heatmap_year = null;
 	}
 
-	save_chart_config_for_user(config, reset=0) {
+	save_chart_config_for_user(config, reset = 0) {
 		Object.assign(this.chart_settings, config);
 		frappe.xcall('frappe.desk.doctype.dashboard_settings.dashboard_settings.save_chart_config', {
 			'reset': reset,
@@ -484,13 +499,12 @@ export default class ChartWidget extends Widget {
 			</button>
 			<ul class="dropdown-menu dropdown-menu-right">
 				${actions
-					.map(
-						action =>
-							`<li><a class="dropdown-item" data-action="${action.action}">${
-								action.label
-							}</a></li>`
-					)
-					.join("")}
+				.map(
+					action =>
+						`<li><a class="dropdown-item" data-action="${action.action}">${action.label
+						}</a></li>`
+				)
+				.join("")}
 			</ul>
 		</div>
 		`);
@@ -521,7 +535,7 @@ export default class ChartWidget extends Widget {
 				timespan: args && args.timespan ? args.timespan : null,
 				from_date: args && args.from_date ? args.from_date : null,
 				to_date: args && args.to_date ? args.to_date : null,
-				heatmap_year: args && args.heatmap_year ?  args.heatmap_year : null,
+				heatmap_year: args && args.heatmap_year ? args.heatmap_year : null,
 			};
 		}
 		return frappe.xcall(method, args);
@@ -572,23 +586,13 @@ export default class ChartWidget extends Widget {
 			axisOptions: {
 				xIsSeries: this.chart_doc.timeseries,
 				shortenYAxisNumbers: 1
-			},
+			}
 		};
-
-		if (this.report_result && this.report_result.chart) {
-			chart_args.tooltipOptions = {
-				formatTooltipY: value =>
-					frappe.format(value, {
-						fieldtype: this.report_result.chart.fieldtype,
-						options: this.report_result.chart.options
-					}, { always_show_decimals: true, inline: true })
-			};
-		}
 
 		if (this.chart_doc.type == "Heatmap") {
 			const heatmap_year = parseInt(this.selected_heatmap_year || this.chart_settings.heatmap_year || this.chart_doc.heatmap_year);
 			chart_args.data.start = new Date(`${heatmap_year}-01-01`);
-			chart_args.data.end = new Date(`${heatmap_year+1}-01-01`);
+			chart_args.data.end = new Date(`${heatmap_year + 1}-01-01`);
 		}
 
 		let set_options = (options) => {
@@ -621,7 +625,7 @@ export default class ChartWidget extends Widget {
 			});
 		} else if (["Line", "Bar"].includes(this.chart_doc.type)) {
 			colors = [this.chart_doc.color || []];
-		}  else if (this.chart_doc.type == "Heatmap") {
+		} else if (this.chart_doc.type == "Heatmap") {
 			colors = [];
 		}
 
@@ -717,7 +721,7 @@ export default class ChartWidget extends Widget {
 						) {
 							this.settings =
 								frappe.dashboards.chart_sources[
-									this.chart_doc.source
+								this.chart_doc.source
 								];
 							return Promise.resolve();
 						} else {
@@ -729,7 +733,7 @@ export default class ChartWidget extends Widget {
 									frappe.dom.eval(config);
 									this.settings =
 										frappe.dashboards.chart_sources[
-											this.chart_doc.source
+										this.chart_doc.source
 										];
 								});
 						}
@@ -746,5 +750,166 @@ export default class ChartWidget extends Widget {
 					}
 				}
 			});
+	}
+
+	setup_events() {
+		$(document.body).on('toggleSidebar', () => {
+			this.dashboard_chart && this.dashboard_chart.draw(true);
+		});
+
+		$(document.body).on('toggleListSidebar', () => {
+			this.dashboard_chart && this.dashboard_chart.draw(true);
+		});
+
+		$(document.body).on('toggleFullWidth', () => {
+			this.dashboard_chart && this.dashboard_chart.draw(true);
+		});
+
+		// Kuber: Drill-down Process Testing 
+		$(this.body).on('mouseover', () => {
+			localStorage.setItem(this.chart_name, JSON.stringify({
+				chart_doc: this.chart_doc,
+				chart_settings: this.chart_settings,
+				filters: this.filters,
+				data: this.data
+			}));
+		}).on('mouseout', () => {
+			localStorage.removeItem(this.chart_name);
+		});
+
+		$(this.body).off("click").on("click", (e) => {
+			try {
+				let t = JSON.parse(localStorage.getItem('tip'));
+
+				let selected_time_interval = this.chart_settings.time_interval || this.chart_doc.time_interval;
+				// let selected_timespan = this.chart_settings.timespan || this.chart_doc.timespan;
+				let selected_timespan = "Select Date Range";
+				let selected_from_date = this.chart_settings.from_date || this.chart_doc.from_date;
+				let selected_to_date = this.chart_settings.to_date || this.chart_doc.to_date;
+				let fdate, tdate, clickedDate;
+
+				if (!e.ctrlKey) {
+					switch (selected_time_interval) {
+						case "Weekly":
+							selected_time_interval = "Daily";
+
+							clickedDate = new Date((t.tip.titleName.split('-')[2] < 100) ? "20" + t.tip.titleName.split('-').reverse().join('-') : t.tip.titleName.split('-').reverse().join('-'));
+
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), clickedDate.getDate() - 6);
+							selected_from_date = formatDate(fdate);
+
+							tdate = clickedDate;
+							selected_to_date = formatDate(tdate);
+							break;
+						case "Monthly":
+							selected_time_interval = "Weekly";
+
+							clickedDate = new Date(t.tip.titleName);
+
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), 1);
+							selected_from_date = formatDate(fdate);
+
+							tdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() + 1, 0);
+							selected_to_date = formatDate(tdate);
+							break;
+						case "Quarterly":
+							selected_time_interval = "Monthly";
+
+							let label = t.tip.titleName.split(' ');
+							clickedDate = new Date(label[2], (label[1] - 1) * 3, 1);
+
+							fdate = clickedDate;
+							selected_from_date = formatDate(fdate);
+
+							tdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() + 3, 0)
+							selected_to_date = formatDate(tdate);
+							break;
+						case "Yearly":
+							selected_time_interval = "Quarterly";
+
+							clickedDate = new Date(t.tip.titleName);
+
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), 1);
+							selected_from_date = formatDate(fdate);
+
+							tdate = new Date(clickedDate.getFullYear() + 1, clickedDate.getMonth(), 0);
+							selected_to_date = formatDate(tdate);
+							break;
+						default:
+							return;
+					}
+				}
+				else {
+					switch (selected_time_interval) {
+						case "Daily":
+							selected_time_interval = "Weekly";
+
+							clickedDate = new Date((t.tip.titleName.split('-')[2] < 100) ? "20" + t.tip.titleName.split('-').reverse().join('-') : t.tip.titleName.split('-').reverse().join('-'));
+
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), 1);
+							selected_from_date = formatDate(fdate);
+
+							tdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() + 1, 0);
+							selected_to_date = formatDate(tdate);
+							break;
+						case "Weekly":
+							selected_time_interval = "Monthly";
+
+							clickedDate = new Date((t.tip.titleName.split('-')[2] < 100) ? "20" + t.tip.titleName.split('-').reverse().join('-') : t.tip.titleName.split('-').reverse().join('-'));
+
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() - 1, 1);
+							selected_from_date = formatDate(fdate);
+
+							tdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() + 2, 0);
+							selected_to_date = formatDate(tdate);
+							break;
+						case "Monthly":
+							selected_time_interval = "Quarterly";
+
+							clickedDate = new Date(t.tip.titleName);
+
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() - 6, 1);
+							selected_from_date = formatDate(fdate);
+
+							tdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth() + 6, 0);
+							selected_to_date = formatDate(tdate);
+							break;
+						case "Quarterly":
+							// TODO: CHARTS NOT RESPONDING FROM YEARLY VIEW FOR MULTIPLE YEARS
+							selected_time_interval = "Yearly";
+
+							clickedDate = new Date(t.tip.titleName.split(' ')[2])
+
+							// fdate = new Date(clickedDate.getFullYear() - 2, clickedDate.getMonth(), 1); 
+							fdate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), 1);
+							selected_from_date = formatDate(fdate);
+
+							// tdate = new Date(clickedDate.getFullYear() + 3, clickedDate.getMonth(), 0);
+							tdate = new Date(clickedDate.getFullYear() + 1, clickedDate.getMonth(), 0);
+							selected_to_date = formatDate(tdate);
+							break;
+						default:
+							return;
+					}
+				}
+				console.log(selected_timespan, selected_from_date, selected_to_date, selected_time_interval);
+
+				this.save_chart_config_for_user({
+					'time_interval': selected_time_interval,
+					'timespan': selected_timespan,
+					'from_date': selected_from_date,
+					'to_date': selected_to_date,
+				});
+				// this.save_chart_config_for_user({ 'time_interval': selected_time_interval });
+				this.refresh();
+				function formatDate(date) {
+					var formatted_date = [date.getFullYear(), date.getMonth() < 9 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1, date.getDate()].join('-');
+					return formatted_date;
+				}
+			}
+			catch (err) {
+				console.log(err);
+			}
+		});
 	}
 }
