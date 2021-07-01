@@ -520,6 +520,7 @@ def prepare_message(email, recipient, recipients_list):
 	if frappe.conf.use_ssl and email_account.track_email_status:
 		# Using SSL => Publically available domain => Email Read Reciept Possible
 		message = message.replace("<!--email open check-->", quopri.encodestring('<img src="https://{}/api/method/frappe.core.doctype.communication.email.mark_email_as_seen?name={}"/>'.format(frappe.local.site, email.communication).encode()).decode())
+		message = message.replace("<!--email open check-->", quopri.encodestring('<img src="https://{}/api/method/journeys.journeys.email_read.mark_email_as_seen?name={}&queue={}&recipient={}"/>'.format(frappe.local.site, email.communication, email.name, recipient).encode()).decode())
 	else:
 		# No SSL => No Email Read Reciept
 		message = message.replace("<!--email open check-->", quopri.encodestring("".encode()).decode())
