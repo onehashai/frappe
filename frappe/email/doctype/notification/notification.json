@@ -122,7 +122,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Send Alert On",
-   "options": "\nNew\nSave\nSubmit\nCancel\nDays After\nDays Before\nValue Change\nMethod\nCustom",
+   "options": "\nNew\nSave\nSubmit\nCancel\nDays After\nDays Before\nEvery Year\nValue Change\nMethod\nCustom",
    "reqd": 1,
    "search_index": 1
   },
@@ -134,7 +134,7 @@
    "label": "Trigger Method"
   },
   {
-   "depends_on": "eval:doc.document_type && (doc.event==\"Days After\" || doc.event==\"Days Before\")",
+   "depends_on": "eval:doc.document_type && (doc.event==\"Days After\" || doc.event==\"Days Before\" || doc.event==\"Every Year\")",
    "description": "Send alert if date matches this field's value",
    "fieldname": "date_changed",
    "fieldtype": "Select",
@@ -281,7 +281,7 @@
  "icon": "fa fa-envelope",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2020-11-24 14:25:43.245677",
+ "modified": "2021-07-05 11:47:41.147663",
  "modified_by": "Administrator",
  "module": "Email",
  "name": "Notification",
