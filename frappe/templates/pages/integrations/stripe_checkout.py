@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import cint, fmt_money
 import json
 from frappe.integrations.doctype.stripe_settings.stripe_settings import get_gateway_controller
+from erpnext.erpnext_integrations.stripe_integration import create_stripe_subscription, create_stripe_charge
 
 no_cache = 1
 
@@ -26,7 +27,7 @@ def get_context(context):
 
 		context['amount'] = fmt_money(amount=context['amount'], currency=context['currency'])
 
-		if is_a_subscription(context.reference_doctype, context.reference_docname):
+		if frappe.db.get_value(context.reference_doctype, context.reference_docname, "is_a_subscription"):
 			payment_plan = frappe.db.get_value(context.reference_doctype, context.reference_docname, "payment_plan")
 			recurrence = frappe.db.get_value("Payment Plan", payment_plan, "recurrence")
 
@@ -59,17 +60,20 @@ def make_payment(stripe_token_id, data, reference_doctype=None, reference_docnam
 	})
 
 	gateway_controller = get_gateway_controller(reference_doctype,reference_docname)
-
-	if is_a_subscription(reference_doctype, reference_docname):
-		reference = frappe.get_doc(reference_doctype, reference_docname)
-		data =  reference.create_subscription("stripe", gateway_controller, data)
+	if reference_doctype == "Saas Site":
+		# For Stripe Subscription Model
+		if not "Addon" in data["description"]:
+			reference = frappe.get_doc(reference_doctype, reference_docname)
+			data =  create_stripe_subscription(gateway_controller, data)
+		else:
+			data = create_stripe_charge(gateway_controller, data)
 	else:
-		data =  frappe.get_doc("Stripe Settings", gateway_controller).create_request(data)
+		# Core Function
+		if frappe.db.get_value(reference_doctype, reference_docname, 'is_a_subscription'):
+			reference = frappe.get_doc(reference_doctype, reference_docname)
+			data =  reference.create_subscription("stripe", gateway_controller, data)
+		else:
+			data =  frappe.get_doc("Stripe Settings", gateway_controller).create_request(data)
 
 	frappe.db.commit()
 	return data
-
-def is_a_subscription(reference_doctype, reference_docname):
-	if not frappe.get_meta(reference_doctype).has_field('is_a_subscription'):
-		return False
-	return frappe.db.get_value(reference_doctype, reference_docname, "is_a_subscription")

@@ -127,6 +127,15 @@ class StripeSettings(Document):
 		}
 
 def get_gateway_controller(doctype, docname):
-	reference_doc = frappe.get_doc(doctype, docname)
-	gateway_controller = frappe.db.get_value("Payment Gateway", reference_doc.payment_gateway, "gateway_controller")
+	if doctype == "Saas Site":
+		# For Stripe Subscription Model
+		base_plan = frappe.get_value(doctype, docname, "base_plan")
+		payment_gateway_account = frappe.get_value("Subscription Plan", base_plan, "payment_gateway")
+		payment_gateway = frappe.get_value("Payment Gateway Account", payment_gateway_account, "payment_gateway")
+		gateway_controller = frappe.db.get_value("Payment Gateway", payment_gateway, "gateway_controller")
+
+	else:
+		# Core Function
+		reference_doc = frappe.get_doc(doctype, docname)
+		gateway_controller = frappe.db.get_value("Payment Gateway", reference_doc.payment_gateway, "gateway_controller")
 	return gateway_controller
