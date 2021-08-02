@@ -439,7 +439,6 @@ def send_one(email, smtpserver=None, auto_commit=True, now=False):
 
 			message = prepare_message(email, recipient.recipient, recipients_list)
 			if not frappe.flags.in_test:
-				frappe.log_error(message, recipient.recipient)
 				smtpserver.sess.sendmail(email.sender, recipient.recipient, message)
 
 			recipient.status = "Sent"
