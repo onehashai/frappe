@@ -14,6 +14,15 @@ export default class WebForm extends frappe.ui.FieldGroup {
 	prepare(web_form_doc, doc) {
 		Object.assign(this, web_form_doc);
 		this.fields = web_form_doc.web_form_fields;
+		if (this.is_embeddable && this.captcha){
+			this.fields.push({
+				doctype: "Web Form Field",
+				fieldname: "captcha_field",
+				fieldtype: "HTML",
+				hidden: 0,
+				label: "Captcha"
+			})
+		}
 		this.doc = doc;
 	}
 
@@ -23,8 +32,9 @@ export default class WebForm extends frappe.ui.FieldGroup {
 		if (this.introduction_text) this.set_form_description(this.introduction_text);
 		if (this.allow_print && !this.is_new) this.setup_print_button();
 		if (this.allow_delete && !this.is_new) this.setup_delete_button();
-		if (this.is_new) this.setup_cancel_button();
+		if (this.is_new && !this.is_embeddable) this.setup_cancel_button();
 		this.setup_primary_action();
+		if (this.is_embeddable && this.captcha) this.setup_captcha(this.site_key);
 		$(".link-btn").remove();
 
 		// webform client script
@@ -73,9 +83,11 @@ export default class WebForm extends frappe.ui.FieldGroup {
 	}
 
 	setup_primary_action() {
+		if (!this.is_embeddable) {
 		this.add_button_to_header(this.button_label || "Save", "primary", () =>
 			this.save()
 		);
+		}
 
 		this.add_button_to_footer(this.button_label || "Save", "primary", () =>
 			this.save()
@@ -84,6 +96,30 @@ export default class WebForm extends frappe.ui.FieldGroup {
 
 	setup_cancel_button() {
 		this.add_button_to_header(__("Cancel"), "light", () => this.cancel());
+	}
+
+	setup_captcha(key) {
+		frappe.require("https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit&type=api.js")
+		let captcha;
+		let el = document.querySelector('[data-fieldname="captcha_field"]');
+		window.onloadCallback = function() {
+			captcha = grecaptcha.render(el, {
+				'sitekey' :  key
+			});
+		}
+
+		frappe.web_form.after_load = () => {
+			frappe.web_form.set_df_property('captcha_field', 'hidden', 0);
+		}
+
+		frappe.web_form.validate = () => {
+			if (!grecaptcha.getResponse(captcha)) {
+				frappe.throw("Please complete the captcha");
+			} else {
+				frappe.web_form.doc['captcha_field'] = '';
+				return true;
+			}
+		}
 	}
 
 	setup_delete_button() {
@@ -185,14 +221,15 @@ export default class WebForm extends frappe.ui.FieldGroup {
 
 	handle_success(data) {
 		if (this.accept_payment && !this.doc.paid) {
-			window.location.href = data;
+			window.top.location.href = data;
 		}
 
 		const success_dialog = new frappe.ui.Dialog({
 			title: __("Saved Successfully"),
-			secondary_action: () => {
+			primary_action_label:  "Done",
+			primary_action: () => {
 				if (this.success_url) {
-					window.location.href = this.success_url;
+					window.top.location.href = this.success_url;
 				} else if(this.login_required) {
 					window.location.href =
 						window.location.pathname + "?name=" + data.name;

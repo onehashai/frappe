@@ -265,12 +265,14 @@ frappe.ui.form.Toolbar = class Toolbar {
 			});
 		}
 
-		//WhatsApp
+		// b24b33eb3d7d1e8d
+		// WhatsApp 
 		if(frappe.model.can_email(null, me.frm) && me.frm.doc.docstatus < 2){
 			this.page.add_menu_item(__('WhatsApp'), function () {
 				new frappe.views.WhatsAppComposer();
 			}, true)
 		}
+		// b24b33eb3d7d1e8d
 
 		// go to field modal
 		this.page.add_menu_item(__("Jump to field"), function() {
