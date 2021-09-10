@@ -382,11 +382,13 @@ def trigger_notifications(doc, method=None):
 		return
 
 	if method == "daily":
+		# b24b33eb3d7d1e8d
 		doc_list = frappe.get_all('Notification',
 			filters={
 				'event': ('in', ('Days Before', 'Days After', 'Every Year')),
 				'enabled': 1
 			})
+		# b24b33eb3d7d1e8d
 		for d in doc_list:
 			alert = frappe.get_doc("Notification", d.name)
 

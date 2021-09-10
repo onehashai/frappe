@@ -138,8 +138,10 @@ def init_request(request):
 		frappe.local.http_request = frappe.auth.HTTPRequest()
 
 def process_response(response):
+	# b24b33eb3d7d1e8d
 	if not response.headers.get("X-Frame-Options"):
 		response.headers["X-Frame-Options"] = "SAMEORIGIN"
+	# b24b33eb3d7d1e8d
 	if not response:
 		return
 

@@ -14,6 +14,7 @@ export default class WebForm extends frappe.ui.FieldGroup {
 	prepare(web_form_doc, doc) {
 		Object.assign(this, web_form_doc);
 		this.fields = web_form_doc.web_form_fields;
+		// b24b33eb3d7d1e8d
 		if (this.is_embeddable && this.captcha){
 			this.fields.push({
 				doctype: "Web Form Field",
@@ -23,6 +24,7 @@ export default class WebForm extends frappe.ui.FieldGroup {
 				label: "Captcha"
 			})
 		}
+		// b24b33eb3d7d1e8d
 		this.doc = doc;
 	}
 
@@ -32,10 +34,12 @@ export default class WebForm extends frappe.ui.FieldGroup {
 		if (this.introduction_text) this.set_form_description(this.introduction_text);
 		if (this.allow_print && !this.is_new) this.setup_print_button();
 		if (this.allow_delete && !this.is_new) this.setup_delete_button();
+		// b24b33eb3d7d1e8d
 		if (this.is_new && !this.is_embeddable) this.setup_cancel_button();
 		this.setup_primary_action();
 		if (this.is_embeddable && this.captcha) this.setup_captcha(this.site_key);
 		$(".link-btn").remove();
+		// b24b33eb3d7d1e8d
 
 		// webform client script
 		frappe.init_client_script && frappe.init_client_script();
@@ -83,12 +87,13 @@ export default class WebForm extends frappe.ui.FieldGroup {
 	}
 
 	setup_primary_action() {
+		// b24b33eb3d7d1e8d
 		if (!this.is_embeddable) {
 		this.add_button_to_header(this.button_label || "Save", "primary", () =>
 			this.save()
 		);
 		}
-
+		// b24b33eb3d7d1e8d
 		this.add_button_to_footer(this.button_label || "Save", "primary", () =>
 			this.save()
 		);
@@ -98,6 +103,7 @@ export default class WebForm extends frappe.ui.FieldGroup {
 		this.add_button_to_header(__("Cancel"), "light", () => this.cancel());
 	}
 
+	// b24b33eb3d7d1e8d
 	setup_captcha(key) {
 		frappe.require("https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit&type=api.js")
 		let captcha;
@@ -121,6 +127,7 @@ export default class WebForm extends frappe.ui.FieldGroup {
 			}
 		}
 	}
+	// b24b33eb3d7d1e8d
 
 	setup_delete_button() {
 		this.add_button_to_header(
@@ -220,8 +227,13 @@ export default class WebForm extends frappe.ui.FieldGroup {
 	}
 
 	handle_success(data) {
+		// b24b33eb3d7d1e8d
 		if (this.accept_payment && !this.doc.paid) {
-			window.top.location.href = data;
+			if (this.is_embeddable){
+					window.top.location.href = data;
+			}else{
+				window.location.href = data;
+			}
 		}
 
 		const success_dialog = new frappe.ui.Dialog({
@@ -229,7 +241,12 @@ export default class WebForm extends frappe.ui.FieldGroup {
 			primary_action_label:  "Done",
 			primary_action: () => {
 				if (this.success_url) {
-					window.top.location.href = this.success_url;
+					if (this.is_embeddable){
+						window.top.location.href = this.success_url;
+					}else{
+						window.location.href = this.success_url;
+					}
+					
 				} else if(this.login_required) {
 					window.location.href =
 						window.location.pathname + "?name=" + data.name;
@@ -241,5 +258,6 @@ export default class WebForm extends frappe.ui.FieldGroup {
 		const success_message =
 			this.success_message || __("Your information has been submitted");
 		success_dialog.set_message(success_message);
+		// b24b33eb3d7d1e8d
 	}
 }
