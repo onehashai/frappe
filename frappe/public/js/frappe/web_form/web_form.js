@@ -247,6 +247,8 @@ export default class WebForm extends frappe.ui.FieldGroup {
 						window.location.href = this.success_url;
 					}
 					
+				}else if(!this.success_url && this.is_embeddable){
+					window.location.reload();
 				} else if(this.login_required) {
 					window.location.href =
 						window.location.pathname + "?name=" + data.name;
