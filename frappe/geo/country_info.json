@@ -901,6 +901,8 @@
  },
  "French Polynesia": {
   "code": "pf",
+  "currency":"XPF",
+  "currency_name":"CFP Franc",
   "currency_fraction": "Centime",
   "currency_fraction_units": 100,
   "currency_symbol": "Fr",
