@@ -42,7 +42,7 @@ class SystemSettings(Document):
 
 	def on_update(self):
 		for df in self.meta.get("fields"):
-			if df.fieldtype not in no_value_fields:
+			if df.fieldtype not in no_value_fields and self.has_value_changed(df.fieldname):
 				frappe.db.set_default(df.fieldname, self.get(df.fieldname))
 
 		if self.language:
@@ -54,6 +54,13 @@ class SystemSettings(Document):
 
 		if frappe.flags.update_last_reset_password_date:
 			update_last_reset_password_date()
+
+		if self.use_original_name_for_amended_document and \
+				self.has_value_changed('use_original_name_for_amended_document'):
+			rename_fun = 'frappe.model.utils.rename_cancelled_docs.rename_cancelled_docs'
+			frappe.enqueue(rename_fun)
+			frappe.msgprint(_("preparing the system to use original names for amended docs."
+				"System might be a little slow for a few seconds as it gets ready."))
 
 def update_last_reset_password_date():
 	frappe.db.sql(""" UPDATE `tabUser`

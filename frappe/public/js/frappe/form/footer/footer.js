@@ -24,13 +24,13 @@ frappe.ui.form.Footer = Class.extend({
 			parent: this.wrapper.find(".comment-box"),
 			render_input: true,
 			only_input: true,
-			mentions: frappe.utils.get_names_for_mentions(),
+			enable_mentions: true,
 			df: {
 				fieldtype: 'Comment',
 				fieldname: 'comment'
 			},
 			on_submit: (comment) => {
-				if (strip_html(comment).trim() != "") {
+				if (strip_html(comment).trim() != "" || comment.includes('img')) {
 					this.frm.comment_box.disable();
 					frappe.xcall("frappe.desk.form.utils.add_comment", {
 						reference_doctype: this.frm.doctype,

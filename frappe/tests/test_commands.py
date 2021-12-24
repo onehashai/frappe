@@ -13,7 +13,7 @@ import glob
 # imports - module imports
 import frappe
 import frappe.recorder
-from frappe.installer import add_to_installed_apps
+from frappe.installer import add_to_installed_apps, remove_app
 from frappe.utils import add_to_date, get_bench_relative_path, now
 from frappe.utils.backups import fetch_latest_backups
 
@@ -216,7 +216,7 @@ class TestCommands(BaseTestCommands):
 
 		# test 7: take a backup with frappe.conf.backup.includes
 		self.execute(
-			"bench --site {site} set-config backup '{includes}' --as-dict",
+			"bench --site {site} set-config backup '{includes}' --parse",
 			{"includes": json.dumps(backup["includes"])},
 		)
 		self.execute("bench --site {site} backup --verbose")
@@ -226,7 +226,7 @@ class TestCommands(BaseTestCommands):
 
 		# test 8: take a backup with frappe.conf.backup.excludes
 		self.execute(
-			"bench --site {site} set-config backup '{excludes}' --as-dict",
+			"bench --site {site} set-config backup '{excludes}' --parse",
 			{"excludes": json.dumps(backup["excludes"])},
 		)
 		self.execute("bench --site {site} backup --verbose")
@@ -365,6 +365,43 @@ class TestCommands(BaseTestCommands):
 			installed_apps = set(frappe.get_installed_apps())
 		self.assertSetEqual(list_apps, installed_apps)
 
+		# test 3: parse json format
+		self.execute("bench --site all list-apps --format json")
+		self.assertEquals(self.returncode, 0)
+		self.assertIsInstance(json.loads(self.stdout), dict)
+
+		self.execute("bench --site {site} list-apps --format json")
+		self.assertIsInstance(json.loads(self.stdout), dict)
+
+		self.execute("bench --site {site} list-apps -f json")
+		self.assertIsInstance(json.loads(self.stdout), dict)
+
+	def test_show_config(self):
+		# test 1: sanity check for command
+		self.execute("bench --site all show-config")
+		self.assertEquals(self.returncode, 0)
+
+		# test 2: test keys in table text
+		self.execute(
+			"bench --site {site} set-config test_key '{second_order}' --parse",
+			{"second_order": json.dumps({"test_key": "test_value"})},
+		)
+		self.execute("bench --site {site} show-config")
+		self.assertEquals(self.returncode, 0)
+		self.assertIn("test_key.test_key", self.stdout.split())
+		self.assertIn("test_value", self.stdout.split())
+
+		# test 3: parse json format
+		self.execute("bench --site all show-config --format json")
+		self.assertEquals(self.returncode, 0)
+		self.assertIsInstance(json.loads(self.stdout), dict)
+
+		self.execute("bench --site {site} show-config --format json")
+		self.assertIsInstance(json.loads(self.stdout), dict)
+
+		self.execute("bench --site {site} show-config -f json")
+		self.assertIsInstance(json.loads(self.stdout), dict)
+
 	def test_get_bench_relative_path(self):
 		bench_path = frappe.utils.get_bench_path()
 		test1_path = os.path.join(bench_path, "test1.txt")
@@ -389,3 +426,60 @@ class TestCommands(BaseTestCommands):
 		self.assertEquals(self.returncode, 0)
 		self.assertIn("pong", self.stdout)
 
+	def test_version(self):
+		self.execute("bench version")
+		self.assertEqual(self.returncode, 0)
+
+		for output in ["legacy", "plain", "table", "json"]:
+			self.execute(f"bench version -f {output}")
+			self.assertEqual(self.returncode, 0)
+		
+		self.execute("bench version -f invalid")
+		self.assertEqual(self.returncode, 2)
+
+
+class RemoveAppUnitTests(unittest.TestCase):
+	def test_delete_modules(self):
+		from frappe.installer import (
+				_delete_doctypes,
+				_delete_modules,
+				_get_module_linked_doctype_field_map,
+		)
+
+		test_module = frappe.new_doc("Module Def")
+
+		test_module.update({"module_name": "RemoveThis", "app_name": "frappe"})
+		test_module.save()
+
+		module_def_linked_doctype = frappe.get_doc({
+			"doctype": "DocType",
+			"name": "Doctype linked with module def",
+			"module": "RemoveThis",
+			"custom": 1,
+			"fields": [{
+				"label": "Modulen't",
+				"fieldname": "notmodule",
+				"fieldtype": "Link",
+				"options": "Module Def"
+			}]
+		}).insert()
+
+		doctype_to_link_field_map = _get_module_linked_doctype_field_map()
+
+		self.assertIn("Report", doctype_to_link_field_map)
+		self.assertIn(module_def_linked_doctype.name, doctype_to_link_field_map)
+		self.assertEqual(doctype_to_link_field_map[module_def_linked_doctype.name], "notmodule")
+		self.assertNotIn("DocType", doctype_to_link_field_map)
+
+		doctypes_to_delete = _delete_modules([test_module.module_name], dry_run=False)
+		self.assertEqual(len(doctypes_to_delete), 1)
+
+		_delete_doctypes(doctypes_to_delete, dry_run=False)
+		self.assertFalse(frappe.db.exists("Module Def", test_module.module_name))
+		self.assertFalse(frappe.db.exists("DocType", module_def_linked_doctype.name))
+
+	def test_dry_run(self):
+		"""Check if dry run in not destructive."""
+
+		# nothing to assert, if this fails rest of the test suite will crumble.
+		remove_app("frappe", dry_run=True, yes=True, no_backup=True)

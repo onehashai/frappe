@@ -37,6 +37,8 @@ export default class Grid {
 		}
 
 		this.is_grid = true;
+		this.debounced_refresh = this.refresh.bind(this);
+		this.debounced_refresh = frappe.utils.debounce(this.debounced_refresh, 100);
 	}
 
 	allow_on_grid_editing() {
@@ -196,7 +198,7 @@ export default class Grid {
 		tasks.push(() => {
 			if (dirty) {
 				this.refresh();
-				this.frm.script_manager.trigger(this.df.fieldname + "_delete", this.doctype);
+				this.frm && this.frm.script_manager.trigger(this.df.fieldname + "_delete", this.doctype);
 			}
 		});
 
@@ -213,10 +215,9 @@ export default class Grid {
 			this.frm.doc[this.df.fieldname] = [];
 			$(this.parent).find('.rows').empty();
 			this.grid_rows = [];
-			this.frm.script_manager.trigger(this.df.fieldname + "_delete", this.doctype);
-
-			this.wrapper.find('.grid-heading-row .grid-row-check:checked:first').prop('checked', 0);
 			this.refresh();
+			this.frm && this.frm.script_manager.trigger(this.df.fieldname + "_delete", this.doctype);
+			this.frm && this.frm.dirty();
 			this.scroll_to_top();
 		});
 	}
@@ -236,10 +237,16 @@ export default class Grid {
 	}
 
 	refresh_remove_rows_button() {
+		if (this.df.cannot_delete_rows) {
+			return;
+		}
+
 		this.remove_rows_button.toggleClass('hidden',
 			this.wrapper.find('.grid-body .grid-row-check:checked:first').length ? false : true);
-		this.remove_all_rows_button.toggleClass('hidden',
-			this.wrapper.find('.grid-heading-row .grid-row-check:checked:first').length ? false : true);
+
+		let select_all_checkbox_checked = this.wrapper.find('.grid-heading-row .grid-row-check:checked:first').length;
+		let show_delete_all_btn = select_all_checkbox_checked && this.data.length > this.get_selected_children().length;
+		this.remove_all_rows_button.toggleClass('hidden', !show_delete_all_btn);
 	}
 
 	get_selected() {
@@ -258,17 +265,27 @@ export default class Grid {
 		});
 	}
 
+	reset_grid() {
+		this.visible_columns = [];
+		this.grid_rows = [];
+
+		$(this.parent).find(".grid-body .grid-row").remove();
+		this.refresh();
+	}
+
 	make_head() {
 		// labels
-		if (!this.header_row) {
-			this.header_row = new GridRow({
-				parent: $(this.parent).find(".grid-heading-row"),
-				parent_df: this.df,
-				docfields: this.docfields,
-				frm: this.frm,
-				grid: this
-			});
+		if (this.header_row) {
+			$(this.parent).find(".grid-heading-row .grid-row").remove();
 		}
+		this.header_row = new GridRow({
+			parent: $(this.parent).find(".grid-heading-row"),
+			parent_df: this.df,
+			docfields: this.docfields,
+			frm: this.frm,
+			grid: this,
+			configure_columns: true
+		});
 	}
 
 	refresh(force) {
@@ -344,6 +361,9 @@ export default class Grid {
 			}
 			if (d.idx === undefined) {
 				d.idx = ri + 1;
+			}
+			if (d.name === undefined) {
+				d.name = "row " + d.idx;
 			}
 			if (this.grid_rows[ri] && !append_row) {
 				var grid_row = this.grid_rows[ri];
@@ -492,7 +512,7 @@ export default class Grid {
 			this.set_editable_grid_column_disp(fieldname, show);
 		}
 
-		this.refresh(true);
+		this.debounced_refresh();
 	}
 
 	set_editable_grid_column_disp(fieldname, show) {
@@ -536,17 +556,17 @@ export default class Grid {
 
 	toggle_reqd(fieldname, reqd) {
 		this.get_docfield(fieldname).reqd = reqd;
-		this.refresh();
+		this.debounced_refresh();
 	}
 
 	toggle_enable(fieldname, enable) {
 		this.get_docfield(fieldname).read_only = enable ? 0 : 1;
-		this.refresh();
+		this.debounced_refresh();
 	}
 
 	toggle_display(fieldname, show) {
 		this.get_docfield(fieldname).hidden = show ? 0 : 1;
-		this.refresh();
+		this.debounced_refresh();
 	}
 
 	toggle_checkboxes(enable) {
@@ -667,6 +687,7 @@ export default class Grid {
 		if (!idx) {
 			idx = this.grid_rows.length - 1;
 		}
+
 		setTimeout(() => {
 			this.grid_rows[idx].row
 				.find('input[type="Text"],textarea,select').filter(':visible:first').focus();
@@ -674,10 +695,13 @@ export default class Grid {
 	}
 
 	setup_visible_columns() {
-		if (this.visible_columns) return;
+		if (this.visible_columns && this.visible_columns.length > 0) return;
 
+		this.user_defined_columns = [];
+		this.setup_user_defined_columns();
 		var total_colsize = 1,
-			fields = this.editable_fields || this.docfields;
+			fields = (this.user_defined_columns && this.user_defined_columns.length > 0)
+				? this.user_defined_columns : this.editable_fields || this.docfields;
 
 		this.visible_columns = [];
 
@@ -685,9 +709,9 @@ export default class Grid {
 			var _df = fields[ci];
 
 			// get docfield if from fieldname
-			df = this.fields_map[_df.fieldname];
+			df = (this.user_defined_columns && this.user_defined_columns.length > 0) ? _df : this.fields_map[_df.fieldname];
 
-			if (!df.hidden
+			if (df && !df.hidden
 				&& (this.editable_fields || df.in_list_view)
 				&& (this.frm && this.frm.get_perm(df.permlevel, "read") || !this.frm)
 				&& !in_list(frappe.model.layout_fields, df.fieldtype)) {
@@ -695,13 +719,7 @@ export default class Grid {
 				if (df.columns) {
 					df.colsize = df.columns;
 				} else {
-					var colsize = 2;
-					switch (df.fieldtype) {
-						case "Text": break;
-						case "Small Text": colsize = 3; break;
-						case "Check": colsize = 1;
-					}
-					df.colsize = colsize;
+					this.update_default_colsize(df);
 				}
 
 				// attach formatter on refresh
@@ -744,6 +762,31 @@ export default class Grid {
 		}
 	}
 
+	update_default_colsize(df) {
+		var colsize = 2;
+		switch (df.fieldtype) {
+			case "Text": break;
+			case "Small Text": colsize = 3; break;
+			case "Check": colsize = 1;
+		}
+		df.colsize = colsize;
+	}
+
+	setup_user_defined_columns() {
+		if (this.frm) {
+			let user_settings = frappe.get_user_settings(this.frm.doctype, 'GridView');
+			if (user_settings && user_settings[this.doctype] && user_settings[this.doctype].length) {
+				this.user_defined_columns = user_settings[this.doctype].map(row => {
+					let column = frappe.meta.get_docfield(this.doctype, row.fieldname);
+					if (column) {
+						column.in_list_view = 1;
+						column.columns = row.columns;
+						return column;
+					}
+				});
+			}
+		}
+	}
 
 	is_editable() {
 		return this.display_status == "Write" && !this.static_rows;
@@ -823,10 +866,11 @@ export default class Grid {
 									$.each(row, (ci, value) => {
 										var fieldname = fieldnames[ci];
 										var df = frappe.meta.get_docfield(me.df.options, fieldname);
-
-										d[fieldnames[ci]] = value_formatter_map[df.fieldtype]
-											? value_formatter_map[df.fieldtype](value)
-											: value;
+										if (df) {
+											d[fieldnames[ci]] = value_formatter_map[df.fieldtype]
+												? value_formatter_map[df.fieldtype](value)
+												: value;
+										}
 									});
 								}
 							}
@@ -910,6 +954,10 @@ export default class Grid {
 
 	update_docfield_property(fieldname, property, value) {
 		// update the docfield of each row
+		if (!this.grid_rows) {
+			return;
+		}
+
 		for (let row of this.grid_rows) {
 			let docfield = row.docfields.find(d => d.fieldname === fieldname);
 			if (docfield) {
@@ -922,6 +970,6 @@ export default class Grid {
 		// update the parent too (for new rows)
 		this.docfields.find(d => d.fieldname === fieldname)[property] = value;
 
-		this.refresh();
+		this.debounced_refresh();
 	}
 }

@@ -62,6 +62,20 @@ def get_report_doc(report_name):
 	return doc
 
 
+def get_report_result(report, filters):
+	if report.report_type == "Query Report":
+		res = report.execute_query_report(filters)
+
+	elif report.report_type == "Script Report":
+		res = report.execute_script_report(filters)
+
+	elif report.report_type == "Custom Report":
+		ref_report = get_report_doc(report.report_name)
+		res = get_report_result(ref_report, filters)
+
+	return res
+
+@frappe.read_only()
 def generate_report_result(report, filters=None, user=None, custom_columns=None):
 	user = user or frappe.session.user
 	filters = filters or []
@@ -69,13 +83,7 @@ def generate_report_result(report, filters=None, user=None, custom_columns=None)
 	if filters and isinstance(filters, string_types):
 		filters = json.loads(filters)
 
-	res = []
-
-	if report.report_type == "Query Report":
-		res = report.execute_query_report(filters)
-
-	elif report.report_type == "Script Report":
-		res = report.execute_script_report(filters)
+	res = get_report_result(report, filters) or []
 
 	columns, result, message, chart, report_summary, skip_total_row = ljust_list(res, 6)
 	columns = [get_column_as_dict(col) for col in columns]
@@ -180,11 +188,13 @@ def get_script(report_name):
 	if os.path.exists(script_path):
 		with open(script_path, "r") as f:
 			script = f.read()
+			script += f"\n\n//# sourceURL={scrub(report.name)}.js"
 
 	html_format = get_html_format(print_path)
 
 	if not script and report.javascript:
 		script = report.javascript
+		script += f"\n\n//# sourceURL={scrub(report.name)}__custom"
 
 	if not script:
 		script = "frappe.query_reports['%s']={}" % report_name
@@ -377,22 +387,29 @@ def handle_duration_fieldtype_values(result, columns):
 
 		if fieldtype == "Duration":
 			for entry in range(0, len(result)):
-				val_in_seconds = result[entry][i]
-				if val_in_seconds:
-					duration_val = format_duration(val_in_seconds)
-					result[entry][i] = duration_val
+				row = result[entry]
+				if isinstance(row, dict):
+					val_in_seconds = row[col.fieldname]
+					if val_in_seconds:
+						duration_val = format_duration(val_in_seconds)
+						row[col.fieldname] = duration_val
+				else:
+					val_in_seconds = row[i]
+					if val_in_seconds:
+						duration_val = format_duration(val_in_seconds)
+						row[i] = duration_val
 
 	return result
 
 
-def build_xlsx_data(columns, data, visible_idx, include_indentation):
+def build_xlsx_data(columns, data, visible_idx, include_indentation, ignore_visible_idx=False):
 	result = [[]]
 	column_widths = []
 
 	for column in data.columns:
 		if column.get("hidden"):
 			continue
-		result[0].append(column["label"])
+		result[0].append(column.get("label"))
 		column_width = cint(column.get('width', 0))
 		# to convert into scale accepted by openpyxl
 		column_width /= 10
@@ -401,7 +418,7 @@ def build_xlsx_data(columns, data, visible_idx, include_indentation):
 	# build table from result
 	for row_idx, row in enumerate(data.result):
 		# only pick up rows that are visible in the report
-		if row_idx in visible_idx:
+		if ignore_visible_idx or row_idx in visible_idx:
 			row_data = []
 			if isinstance(row, dict):
 				for col_idx, column in enumerate(data.columns):
@@ -491,12 +508,17 @@ def add_total_row(result, columns, meta=None):
 
 
 @frappe.whitelist()
-def get_data_for_custom_field(doctype, field):
+def get_data_for_custom_field(doctype, fieldname, field=None):
 
 	if not frappe.has_permission(doctype, "read"):
 		frappe.throw(_("Not Permitted"), frappe.PermissionError)
 
-	value_map = frappe._dict(frappe.get_all(doctype, fields=["name", field], as_list=1))
+	if field:
+		custom_field = field + " as " + fieldname
+	else:
+		custom_field = fieldname
+
+	value_map = frappe._dict(frappe.get_all(doctype, fields=["name", custom_field], as_list=1))
 
 	return value_map
 
@@ -508,8 +530,9 @@ def get_data_for_custom_report(columns):
 		if column.get("link_field"):
 			fieldname = column.get("fieldname")
 			doctype = column.get("doctype")
+			field = column.get("field")
 			doc_field_value_map[(doctype, fieldname)] = get_data_for_custom_field(
-				doctype, fieldname
+				doctype, fieldname, field
 			)
 
 	return doc_field_value_map

@@ -409,6 +409,9 @@ frappe.ui.Page = Class.extend({
 			parent.parent().removeClass("hide");
 		}
 
+		let $link = this.is_in_group_button_dropdown(parent, 'li > a.grey-link', label);
+		if ($link) return $link;
+
 		let $li;
 		let $icon = ``;
 
@@ -440,9 +443,8 @@ frappe.ui.Page = Class.extend({
 				</li>
 			`);
 		}
-		var $link = $li.find("a").on("click", click);
 
-		if (this.is_in_group_button_dropdown(parent, 'li > a.grey-link', label)) return;
+		$link = $li.find("a").on("click", click);
 
 		if (standard) {
 			$li.appendTo(parent);
@@ -508,7 +510,7 @@ frappe.ui.Page = Class.extend({
 				let item = $(this).html();
 				return $(item).attr('data-label') === label;
 			});
-		return result.length > 0;
+		return result.length > 0 && result;
 	},
 
 	clear_btn_group: function(parent) {
@@ -612,6 +614,23 @@ frappe.ui.Page = Class.extend({
 			if ($group.find('.dropdown-item').length === 0) $group.remove();
 		} else {
 			this.inner_toolbar.find(`button[data-label="${encodeURIComponent(label)}"]`).remove();
+		}
+	},
+
+	change_inner_button_type: function(label, group, type) {
+		let btn;
+
+		if (group) {
+			var $group = this.get_inner_group_button(__(group));
+			if ($group.length) {
+				btn = $group.find(`.dropdown-item[data-label="${encodeURIComponent(label)}"]`);
+			}
+		} else {
+			btn = this.inner_toolbar.find(`button[data-label="${encodeURIComponent(label)}"]`);
+		}
+
+		if (btn) {
+			btn.removeClass().addClass(`btn btn-${type} ellipsis`);
 		}
 	},
 

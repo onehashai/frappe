@@ -250,6 +250,18 @@ frappe.ui.form.Layout = Class.extend({
 			// collapse sections
 			this.refresh_section_collapse();
 		}
+
+		if (document.activeElement) {
+			if (document.activeElement.tagName == 'INPUT' && this.is_numeric_field_active()) {
+				document.activeElement.select();
+			}
+		}
+	},
+	
+	is_numeric_field_active() {
+		const control = $(document.activeElement).closest(".frappe-control");
+		const fieldtype = (control.data() || {}).fieldtype;
+		return frappe.model.numeric_fieldtypes.includes(fieldtype);
 	},
 
 	refresh_sections: function() {
@@ -263,9 +275,6 @@ frappe.ui.form.Layout = Class.extend({
 				section.addClass("empty-section");
 			}
 		});
-
-		this.frm && this.frm.dashboard.refresh();
-
 	},
 
 	refresh_fields: function (fields) {
@@ -399,7 +408,8 @@ frappe.ui.form.Layout = Class.extend({
 					// next row
 					grid_row.grid.grid_rows[grid_row.doc.idx].toggle_view(true);
 				}
-			} else {
+			} else if (!shift) {
+				// End of tab navigation
 				$(this.primary_button).focus();
 			}
 		}
@@ -510,7 +520,7 @@ frappe.ui.form.Layout = Class.extend({
 			form_obj = this;
 		}
 		if (form_obj) {
-			if (this.doc && this.doc.parent) {
+			if (this.doc && this.doc.parent && this.doc.parentfield) {
 				form_obj.setting_dependency = true;
 				form_obj.set_df_property(this.doc.parentfield, property, value, this.doc.parent, fieldname, this.doc.name);
 				form_obj.setting_dependency = false;
@@ -543,7 +553,7 @@ frappe.ui.form.Layout = Class.extend({
 
 		} else if (expression.substr(0, 5)=='eval:') {
 			try {
-				out = eval(expression.substr(5));
+				out = frappe.utils.eval(expression.substr(5), { doc, parent });
 				if (parent && parent.istable && expression.includes('is_submittable')) {
 					out = true;
 				}
