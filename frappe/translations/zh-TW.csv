@@ -456,7 +456,7 @@ DocType: About Us Settings,Introduce your company to the website visitor.,對網
 apps/frappe/frappe/utils/password.py +149,"Encryption key is invalid, Please check site_config.json",加密密鑰無效，請檢查site_config.json
 DocType: SMS Settings,Receiver Parameter,收受方參數
 DocType: Data Migration Mapping Detail,Remote Fieldname,遠程字段名稱
-apps/frappe/frappe/core/doctype/user/user.py +106,Cannot change user details in demo. Please signup for a new account at https://erpnext.com,演示中無法更改用戶詳細信息。請在https://erpnext.com註冊一個新帳戶
+apps/frappe/frappe/core/doctype/user/user.py +106,Cannot change user details in demo. Please signup for a new account at https://onehash.ai,演示中無法更改用戶詳細信息。請在https://onehash.ai註冊一個新帳戶
 apps/frappe/frappe/printing/doctype/print_format/print_format.js +18,Please duplicate this to make changes,請複製此做出改變
 apps/frappe/frappe/public/js/frappe/list/list_filter.js +99,Press Enter to save,按Enter鍵保存
 apps/frappe/frappe/utils/pdf.py +40,PDF generation failed because of broken image links,PDF生成，因為破碎的圖像鏈接失敗

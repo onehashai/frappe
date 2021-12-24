@@ -64,8 +64,6 @@ frappe.Application = Class.extend({
 			}
 		});
 
-		this.set_rtl();
-
 		// page container
 		this.make_page_container();
 		this.set_route();
@@ -113,8 +111,6 @@ frappe.Application = Class.extend({
 			});
 			dialog.get_close_btn().toggle(false);
 		});
-
-		this.setup_user_group_listeners();
 
 		// listen to build errors
 		this.setup_build_error_listener();
@@ -234,7 +230,7 @@ frappe.Application = Class.extend({
 			s.fields_dict.checking.$wrapper.html('<i class="fa fa-spinner fa-spin fa-4x"></i>');
 			s.show();
 			frappe.call({
-				method: 'frappe.core.doctype.user.user.set_email_password',
+				method: 'frappe.email.doctype.email_account.email_account.set_email_password',
 				args: {
 					"email_account": email_account[i]["email_account"],
 					"user": user,
@@ -291,7 +287,7 @@ frappe.Application = Class.extend({
 		}
 		if (!frappe.workspaces['home']) {
 			// default workspace is settings for Frappe
-			frappe.workspaces['home'] = frappe.workspaces['build'];
+			frappe.workspaces['home'] = frappe.workspaces[Object.keys(frappe.workspaces)[0]];
 		}
 	},
 
@@ -476,25 +472,19 @@ frappe.Application = Class.extend({
 		$('<link rel="icon" href="' + link + '" type="image/x-icon">').appendTo("head");
 	},
 	trigger_primary_action: function() {
-		if(window.cur_dialog && cur_dialog.display) {
-			// trigger primary
-			cur_dialog.get_primary_btn().trigger("click");
-		} else if(cur_frm && cur_frm.page.btn_primary.is(':visible')) {
-			cur_frm.page.btn_primary.trigger('click');
-		} else if(frappe.container.page.save_action) {
-			frappe.container.page.save_action();
-		}
-	},
-
-	set_rtl: function() {
-		if (frappe.utils.is_rtl()) {
-			var ls = document.createElement('link');
-			ls.rel="stylesheet";
-			ls.type = "text/css";
-			ls.href= "/assets/css/frappe-rtl.css";
-			document.getElementsByTagName('head')[0].appendChild(ls);
-			$('body').addClass('frappe-rtl');
-		}
+		// to trigger change event on active input before triggering primary action
+		$(document.activeElement).blur();
+		// wait for possible JS validations triggered after blur (it might change primary button)
+		setTimeout(() => {
+			if (window.cur_dialog && cur_dialog.display) {
+				// trigger primary
+				cur_dialog.get_primary_btn().trigger("click");
+			} else if (cur_frm && cur_frm.page.btn_primary.is(':visible')) {
+				cur_frm.page.btn_primary.trigger('click');
+			} else if (frappe.container.page.save_action) {
+				frappe.container.page.save_action();
+			}
+		}, 100);
 	},
 
 	show_change_log: function() {
@@ -531,6 +521,8 @@ frappe.Application = Class.extend({
 	},
 
 	show_update_available: () => {
+		if (frappe.boot.sysdefaults.disable_system_update_notification) return;
+
 		frappe.call({
 			"method": "frappe.utils.change_log.show_update_popup"
 		});
@@ -593,15 +585,6 @@ frappe.Application = Class.extend({
 		}
 	},
 
-	setup_user_group_listeners() {
-		frappe.realtime.on('user_group_added', (user_group) => {
-			frappe.boot.user_groups && frappe.boot.user_groups.push(user_group);
-		});
-		frappe.realtime.on('user_group_deleted', (user_group) => {
-			frappe.boot.user_groups = (frappe.boot.user_groups || []).filter(el => el !== user_group);
-		});
-	},
-
 	setup_energy_point_listeners() {
 		frappe.realtime.on('energy_point_alert', (message) => {
 			frappe.show_alert(message);
@@ -611,8 +594,7 @@ frappe.Application = Class.extend({
 	setup_copy_doc_listener() {
 		$('body').on('paste', (e) => {
 			try {
-				let clipboard_data = e.clipboardData || window.clipboardData || e.originalEvent.clipboardData;
-				let pasted_data = clipboard_data.getData('Text');
+				let pasted_data = frappe.utils.get_clipboard_data(e);
 				let doc = JSON.parse(pasted_data);
 				if (doc.doctype) {
 					e.preventDefault();
@@ -627,6 +609,7 @@ frappe.Application = Class.extend({
 						let res = frappe.model.with_doctype(doc.doctype, () => {
 							let newdoc = frappe.model.copy_doc(doc);
 							newdoc.__newname = doc.name;
+							delete doc.name;
 							newdoc.idx = null;
 							newdoc.__run_link_triggers = false;
 							frappe.set_route('Form', newdoc.doctype, newdoc.name);

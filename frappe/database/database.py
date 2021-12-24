@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 
 import re
 import time
+from typing import Dict, List, Union
 import frappe
 import datetime
 import frappe.defaults
@@ -15,9 +16,8 @@ import frappe.model.meta
 
 from frappe import _
 from time import time
-from frappe.utils import now, getdate, cast_fieldtype, get_datetime
+from frappe.utils import now, getdate, cast, get_datetime, get_table_name
 from frappe.model.utils.link_count import flush_local_link_count
-from frappe.utils import cint
 
 # imports - compatibility imports
 from six import (
@@ -41,6 +41,7 @@ class Database(object):
 	STANDARD_VARCHAR_COLUMNS = ('name', 'owner', 'modified_by', 'parent', 'parentfield', 'parenttype')
 	DEFAULT_COLUMNS = ['name', 'creation', 'modified', 'modified_by', 'owner', 'docstatus', 'parent',
 		'parentfield', 'parenttype', 'idx']
+	MAX_WRITES_PER_TRANSACTION = 200_000
 
 	class InvalidColumnName(frappe.ValidationError): pass
 
@@ -113,6 +114,7 @@ class Database(object):
 				{"name": "a%", "owner":"test@example.com"})
 
 		"""
+		query = str(query)
 		if re.search(r'ifnull\(', query, flags=re.IGNORECASE):
 			# replaces ifnull in query with coalesce
 			query = re.sub(r'ifnull\(', 'coalesce(', query, flags=re.IGNORECASE)
@@ -166,6 +168,12 @@ class Database(object):
 				# only for mariadb
 				frappe.errprint('Syntax error in query:')
 				frappe.errprint(query)
+
+			elif self.is_deadlocked(e):
+				raise frappe.QueryDeadlockError(e)
+
+			elif self.is_timedout(e):
+				raise frappe.QueryTimeoutError(e)
 
 			if ignore_ddl and (self.is_missing_column(e) or self.is_missing_table(e) or self.cant_drop_field_or_key(e)):
 				pass
@@ -261,7 +269,7 @@ class Database(object):
 
 		if query[:6].lower() in ('update', 'insert', 'delete'):
 			self.transaction_writes += 1
-			if self.transaction_writes > 200000:
+			if self.transaction_writes > self.MAX_WRITES_PER_TRANSACTION:
 				if self.auto_commit_on_many_writes:
 					self.commit()
 				else:
@@ -340,7 +348,7 @@ class Database(object):
 			values[key] = value
 			if isinstance(value, (list, tuple)):
 				# value is a tuple like ("!=", 0)
-				_operator = value[0]
+				_operator = value[0].lower()
 				values[key] = value[1]
 				if isinstance(value[1], (tuple, list)):
 					# value is a list in tuple ("in", ("A", "B"))
@@ -524,7 +532,6 @@ class Database(object):
 			FROM   `tabSingles`
 			WHERE  doctype = %s
 		""", doctype)
-		# result = _cast_result(doctype, result)
 
 		dict_  = frappe._dict(result)
 
@@ -551,7 +558,7 @@ class Database(object):
 		"""
 
 		if not doctype in self.value_cache:
-			self.value_cache = self.value_cache[doctype] = {}
+			self.value_cache[doctype] = {}
 
 		if fieldname in self.value_cache[doctype]:
 			return self.value_cache[doctype][fieldname]
@@ -565,8 +572,7 @@ class Database(object):
 		if not df:
 			frappe.throw(_('Invalid field name: {0}').format(frappe.bold(fieldname)), self.InvalidColumnName)
 
-		if df.fieldtype in frappe.model.numeric_fieldtypes:
-			val = cint(val)
+		val = cast(df.fieldtype, val)
 
 		self.value_cache[doctype][fieldname] = val
 
@@ -905,13 +911,13 @@ class Database(object):
 			WHERE table_name = 'tab{0}' AND column_name = '{1}' '''.format(doctype, column))[0][0]
 
 	def has_index(self, table_name, index_name):
-		pass
+		raise NotImplementedError
 
 	def add_index(self, doctype, fields, index_name=None):
-		pass
+		raise NotImplementedError
 
 	def add_unique(self, doctype, fields, constraint_name=None):
-		pass
+		raise NotImplementedError
 
 	@staticmethod
 	def get_index_name(fields):
@@ -937,7 +943,7 @@ class Database(object):
 	def escape(s, percent=True):
 		"""Excape quotes and percent in given string."""
 		# implemented in specific class
-		pass
+		raise NotImplementedError
 
 	@staticmethod
 	def is_column_missing(e):
@@ -962,15 +968,37 @@ class Database(object):
 		query = sql_dict.get(current_dialect)
 		return self.sql(query, values, **kwargs)
 
-	def delete(self, doctype, conditions, debug=False):
-		if conditions:
-			conditions, values = self.build_conditions(conditions)
-			return self.sql("DELETE FROM `tab{doctype}` where {conditions}".format(
-				doctype=doctype,
-				conditions=conditions
-			), values, debug=debug)
-		else:
-			frappe.throw(_('No conditions provided'))
+	def delete(self, doctype: str, filters: Union[Dict, List] = None, debug=False, **kwargs):
+		"""Delete rows from a table in site which match the passed filters. This
+		does trigger DocType hooks. Simply runs a DELETE query in the database.
+
+		Doctype name can be passed directly, it will be pre-pended with `tab`.
+		"""
+		values = ()
+		filters = filters or kwargs.get("conditions")
+		table = get_table_name(doctype)
+		query = f"DELETE FROM `{table}`"
+
+		if "debug" not in kwargs:
+			kwargs["debug"] = debug
+
+		if filters:
+			conditions, values = self.build_conditions(filters)
+			query = f"{query} WHERE {conditions}"
+
+		return self.sql(query, values, **kwargs)
+
+	def truncate(self, doctype: str):
+		"""Truncate a table in the database. This runs a DDL command `TRUNCATE TABLE`.
+		This cannot be rolled back.
+
+		Doctype name can be passed directly, it will be pre-pended with `tab`.
+		"""
+		table = doctype if doctype.startswith("__") else f"tab{doctype}"
+		return self.sql_ddl(f"truncate `{table}`")
+
+	def clear_table(self, doctype):
+		return self.truncate(doctype)
 
 	def get_last_created(self, doctype):
 		last_record = self.get_all(doctype, ('creation'), limit=1, order_by='creation desc')
@@ -1032,6 +1060,7 @@ class Database(object):
 					), tuple(insert_list))
 				insert_list = []
 
+
 def enqueue_jobs_after_commit():
 	from frappe.utils.background_jobs import execute_job, get_queue
 
@@ -1041,19 +1070,3 @@ def enqueue_jobs_after_commit():
 			q.enqueue_call(execute_job, timeout=job.get("timeout"),
 							kwargs=job.get("queue_args"))
 		frappe.flags.enqueue_after_commit = []
-
-# Helpers
-def _cast_result(doctype, result):
-	batch = [ ]
-
-	try:
-		for field, value in result:
-			df = frappe.get_meta(doctype).get_field(field)
-			if df:
-				value = cast_fieldtype(df.fieldtype, value)
-
-			batch.append(tuple([field, value]))
-	except frappe.exceptions.DoesNotExistError:
-		return result
-
-	return tuple(batch)

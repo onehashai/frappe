@@ -7,8 +7,8 @@ import time
 from frappe import _, msgprint, is_whitelisted
 from frappe.utils import flt, cstr, now, get_datetime_str, file_lock, date_diff
 from frappe.model.base_document import BaseDocument, get_controller
-from frappe.model.naming import set_new_name
 from six import iteritems, string_types
+from frappe.model.naming import set_new_name, gen_new_name_for_cancelled_doc
 from werkzeug.exceptions import NotFound, Forbidden
 import hashlib, json
 from frappe.model import optional_fields, table_fields
@@ -18,6 +18,7 @@ from frappe.utils.global_search import update_global_search
 from frappe.integrations.doctype.webhook import run_webhooks
 from frappe.desk.form.document_follow import follow_document
 from frappe.core.doctype.server_script.server_script_utils import run_server_script_for_doc_event
+from frappe.utils.data import get_absolute_url
 
 # once_only validation
 # methods
@@ -308,6 +309,9 @@ class Document(BaseDocument):
 
 		self.check_permission("write", "save")
 
+		if self.docstatus == 2:
+			self._rename_doc_on_cancel()
+
 		self.set_user_and_timestamp()
 		self.set_docstatus()
 		self.check_if_latest()
@@ -494,6 +498,7 @@ class Document(BaseDocument):
 		self._validate_selects()
 		self._validate_non_negative()
 		self._validate_length()
+		self._validate_code_fields()
 		self._extract_images_from_text_editor()
 		self._sanitize_content()
 		self._save_passwords()
@@ -505,6 +510,7 @@ class Document(BaseDocument):
 			d._validate_selects()
 			d._validate_non_negative()
 			d._validate_length()
+			d._validate_code_fields()
 			d._extract_images_from_text_editor()
 			d._sanitize_content()
 			d._save_passwords()
@@ -707,7 +713,6 @@ class Document(BaseDocument):
 			else:
 				tmp = frappe.db.sql("""select modified, docstatus from `tab{0}`
 					where name = %s for update""".format(self.doctype), self.name, as_dict=True)
-
 				if not tmp:
 					frappe.throw(_("Record does not exist"))
 				else:
@@ -747,8 +752,10 @@ class Document(BaseDocument):
 			elif self.docstatus==1:
 				self._action = "submit"
 				self.check_permission("submit")
+			elif self.docstatus==2:
+				raise frappe.DocstatusTransitionError(_("Cannot change docstatus from 0 (Draft) to 2 (Cancelled)"))
 			else:
-				raise frappe.DocstatusTransitionError(_("Cannot change docstatus from 0 to 2"))
+				raise frappe.ValidationError(_("Invalid docstatus"), self.docstatus)
 
 		elif docstatus==1:
 			if self.docstatus==1:
@@ -757,8 +764,10 @@ class Document(BaseDocument):
 			elif self.docstatus==2:
 				self._action = "cancel"
 				self.check_permission("cancel")
+			elif self.docstatus==0:
+				raise frappe.DocstatusTransitionError(_("Cannot change docstatus from 1 (Submitted) to 0 (Draft)"))
 			else:
-				raise frappe.DocstatusTransitionError(_("Cannot change docstatus from 1 to 0"))
+				raise frappe.ValidationError(_("Invalid docstatus"), self.docstatus)
 
 		elif docstatus==2:
 			raise frappe.ValidationError(_("Cannot edit cancelled document"))
@@ -915,23 +924,24 @@ class Document(BaseDocument):
 	def _submit(self):
 		"""Submit the document. Sets `docstatus` = 1, then saves."""
 		self.docstatus = 1
-		self.save()
+		return self.save()
 
 	@whitelist.__func__
 	def _cancel(self):
-		"""Cancel the document. Sets `docstatus` = 2, then saves."""
+		"""Cancel the document. Sets `docstatus` = 2, then saves.
+		"""
 		self.docstatus = 2
-		self.save()
+		return self.save()
 
 	@whitelist.__func__
 	def submit(self):
 		"""Submit the document. Sets `docstatus` = 1, then saves."""
-		self._submit()
+		return self._submit()
 
 	@whitelist.__func__
 	def cancel(self):
 		"""Cancel the document. Sets `docstatus` = 2, then saves."""
-		self._cancel()
+		return self._cancel()
 
 	def delete(self, ignore_permissions=False):
 		"""Delete document."""
@@ -1063,7 +1073,10 @@ class Document(BaseDocument):
 			self.set("modified", now())
 			self.set("modified_by", frappe.session.user)
 
-		self.load_doc_before_save()
+		# load but do not reload doc_before_save because before_change or on_change might expect it
+		if not self.get_doc_before_save():
+			self.load_doc_before_save()
+
 		# to trigger notification on value change
 		self.run_method('before_change')
 
@@ -1203,8 +1216,8 @@ class Document(BaseDocument):
 			doc.set(fieldname, flt(doc.get(fieldname), self.precision(fieldname, doc.parentfield)))
 
 	def get_url(self):
-		"""Returns Desk URL for this document. `/app/Form/{doctype}/{name}`"""
-		return "/app/Form/{doctype}/{name}".format(doctype=self.doctype, name=self.name)
+		"""Returns Desk URL for this document."""
+		return get_absolute_url(self.doctype, self.name)
 
 	def add_comment(self, comment_type='Comment', text=None, comment_email=None, link_doctype=None, link_name=None, comment_by=None):
 		"""Add a comment to this document.
@@ -1347,6 +1360,28 @@ class Document(BaseDocument):
 		"""Return a list of Tags attached to this document"""
 		from frappe.desk.doctype.tag.tag import DocTags
 		return DocTags(self.doctype).get_tags(self.name).split(",")[1:]
+
+	def _rename_doc_on_cancel(self):
+		if frappe.get_system_settings('use_original_name_for_amended_document', ignore_if_not_exists=True):
+			new_name = gen_new_name_for_cancelled_doc(self)
+			frappe.rename_doc(self.doctype, self.name, new_name, force=True, show_alert=False)
+			self.name = new_name
+
+	def __repr__(self):
+		name = self.name or "unsaved"
+		doctype = self.__class__.__name__
+
+		docstatus = f" docstatus={self.docstatus}" if self.docstatus else ""
+		parent = f" parent={self.parent}" if self.parent else ""
+
+		return f"<{doctype}: {name}{docstatus}{parent}>"
+
+	def __str__(self):
+		name = self.name or "unsaved"
+		doctype = self.__class__.__name__
+
+		return f"{doctype}({name})"
+
 
 def execute_action(doctype, name, action, **kwargs):
 	"""Execute an action on a document (called by background worker)"""

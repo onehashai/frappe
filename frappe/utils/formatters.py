@@ -9,7 +9,7 @@ from frappe.model.meta import get_field_currency, get_field_precision
 import re
 from six import string_types
 
-def format_value(value, df=None, doc=None, currency=None, translated=False):
+def format_value(value, df=None, doc=None, currency=None, translated=False, format=None):
 	'''Format value based on given fieldtype, document reference, currency reference.
 	If docfield info (df) is not given, it will try and guess based on the datatype of the value'''
 	if isinstance(df, string_types):
@@ -58,7 +58,7 @@ def format_value(value, df=None, doc=None, currency=None, translated=False):
 	elif df.get("fieldtype") == "Currency":
 		default_currency = frappe.db.get_default("currency")
 		currency = currency or get_field_currency(df, doc) or default_currency
-		return fmt_money(value, precision=get_field_precision(df, doc), currency=currency)
+		return fmt_money(value, precision=get_field_precision(df, doc), currency=currency, format=format)
 
 	elif df.get("fieldtype") == "Float":
 		precision = get_field_precision(df, doc)
@@ -78,7 +78,7 @@ def format_value(value, df=None, doc=None, currency=None, translated=False):
 		return "{}%".format(flt(value, 2))
 
 	elif df.get("fieldtype") in ("Text", "Small Text"):
-		if not re.search("(\<br|\<div|\<p)", value):
+		if not re.search(r"(<br|<div|<p)", value):
 			return frappe.safe_decode(value).replace("\n", "<br>")
 
 	elif df.get("fieldtype") == "Markdown Editor":

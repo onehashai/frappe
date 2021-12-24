@@ -200,7 +200,7 @@ class Importer:
 		new_doc = frappe.new_doc(self.doctype)
 		new_doc.update(doc)
 
-		if (meta.autoname or "").lower() != "prompt":
+		if not doc.name and (meta.autoname or "").lower() != "prompt":
 			# name can only be set directly if autoname is prompt
 			new_doc.set("name", None)
 
@@ -641,7 +641,7 @@ class Row:
 				return
 		elif df.fieldtype == "Duration":
 			import re
-			is_valid_duration = re.match("^(?:(\d+d)?((^|\s)\d+h)?((^|\s)\d+m)?((^|\s)\d+s)?)$", value)
+			is_valid_duration = re.match(r"^(?:(\d+d)?((^|\s)\d+h)?((^|\s)\d+m)?((^|\s)\d+s)?)$", value)
 			if not is_valid_duration:
 				self.warnings.append(
 					{
@@ -764,7 +764,9 @@ class Column:
 	seen = []
 	fields_column_map = {}
 
-	def __init__(self, index, header, doctype, column_values, map_to_field=None, seen=[]):
+	def __init__(self, index, header, doctype, column_values, map_to_field=None, seen=None):
+		if seen is None:
+			seen = []
 		self.index = index
 		self.column_number = index + 1
 		self.doctype = doctype
@@ -929,10 +931,7 @@ class Column:
 				self.warnings.append(
 					{
 						"col": self.column_number,
-						"message": _(
-							"Date format could not be determined from the values in"
-							" this column. Defaulting to yyyy-mm-dd."
-						),
+						"message": _("Date format could not be determined from the values in this column. Defaulting to yyyy-mm-dd."),
 						"type": "info",
 					}
 				)

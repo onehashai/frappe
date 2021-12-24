@@ -18,6 +18,7 @@ from frappe import _
 from frappe.utils import now, cint
 from frappe.model import no_value_fields, default_fields, data_fieldtypes, table_fields, data_field_options
 from frappe.model.document import Document
+from frappe.model.base_document import get_controller
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.desk.notifications import delete_notification_count_for
@@ -83,11 +84,61 @@ class DocType(Document):
 		if not self.is_new():
 			self.before_update = frappe.get_doc('DocType', self.name)
 			self.setup_fields_to_fetch()
+			self.validate_field_name_conflicts()
 
 		check_email_append_to(self)
 
 		if self.default_print_format and not self.custom:
 			frappe.throw(_('Standard DocType cannot have default print format, use Customize Form'))
+
+		if frappe.conf.get('developer_mode'):
+			self.owner = 'Administrator'
+			self.modified_by = 'Administrator'
+
+	def validate_field_name_conflicts(self):
+		"""Check if field names dont conflict with controller properties and methods"""
+		core_doctypes = [
+			"Custom DocPerm",
+			"DocPerm",
+			"Custom Field",
+			"Customize Form Field",
+			"DocField",
+		]
+
+		if self.name in core_doctypes:
+			return
+
+		try:
+			controller = get_controller(self.name)
+		except ImportError:
+			controller = Document
+
+		available_objects = {x for x in dir(controller) if isinstance(x, str)}
+		property_set = {
+			x for x in available_objects if isinstance(getattr(controller, x, None), property)
+		}
+		method_set = {
+			x for x in available_objects if x not in property_set and callable(getattr(controller, x, None))
+		}
+
+		for docfield in self.get("fields") or []:
+			if docfield.fieldtype in no_value_fields:
+				continue
+
+			conflict_type = None
+			field = docfield.fieldname
+			field_label = docfield.label or docfield.fieldname
+
+			if docfield.fieldname in method_set:
+				conflict_type = "controller method"
+			if docfield.fieldname in property_set:
+				conflict_type = "class property"
+
+			if conflict_type:
+				frappe.throw(
+					_("Fieldname '{0}' conflicting with a {1} of the name {2} in {3}")
+						.format(field_label, conflict_type, field, self.name)
+				)
 
 	def after_insert(self):
 		# clear user cache so that on the next reload this doctype is included in boot
@@ -350,10 +401,7 @@ class DocType(Document):
 			frappe.db.sql("""update tabSingles set value=%s
 				where doctype=%s and field='name' and value = %s""", (new, new, old))
 		else:
-			frappe.db.multisql({
-				"mariadb": f"RENAME TABLE `tab{old}` TO `tab{new}`",
-				"postgres": f"ALTER TABLE `tab{old}` RENAME TO `tab{new}`"
-			})
+			frappe.db.rename_table(old, new)
 			frappe.db.commit()
 
 		# Do not rename and move files and folders for custom doctype
@@ -622,12 +670,12 @@ class DocType(Document):
 		flags = {"flags": re.ASCII} if six.PY3 else {}
 
 		# a DocType name should not start or end with an empty space
-		if re.search("^[ \t\n\r]+|[ \t\n\r]+$", name, **flags):
+		if re.search(r"^[ \t\n\r]+|[ \t\n\r]+$", name, **flags):
 			frappe.throw(_("DocType's name should not start or end with whitespace"), frappe.NameError)
 
 		# a DocType's name should not start with a number or underscore
 		# and should only contain letters, numbers and underscore
-		if not re.match("^(?![\W])[^\d_\s][\w ]+$", name, **flags):
+		if not re.match(r"^(?![\W])[^\d_\s][\w ]+$", name, **flags):
 			frappe.throw(_("DocType's name should start with a letter and it can only consist of letters, numbers, spaces and underscores"), frappe.NameError)
 
 		validate_route_conflict(self.doctype, self.name)
@@ -683,6 +731,19 @@ def validate_links_table_fieldnames(meta):
 		if not link_meta.get_field(link.link_fieldname):
 			message = _("Row #{0}: Could not find field {1} in {2} DocType").format(index+1, frappe.bold(link.link_fieldname), frappe.bold(link.link_doctype))
 			frappe.throw(message, InvalidFieldNameError, _("Invalid Fieldname"))
+
+		if link.is_child_table and not meta.get_field(link.table_fieldname):
+			message = _("Row #{0}: Could not find field {1} in {2} DocType").format(index+1, frappe.bold(link.table_fieldname), frappe.bold(meta.name))
+			frappe.throw(message, frappe.ValidationError, _("Invalid Table Fieldname"))
+
+		if link.is_child_table:
+			if not link.parent_doctype:
+				message = _("Row #{0}: Parent DocType is mandatory for internal links").format(index+1)
+				frappe.throw(message, frappe.ValidationError, _("Parent Missing"))
+
+			if not link.table_fieldname:
+				message = _("Row #{0}: Table Fieldname is mandatory for internal links").format(index+1)
+				frappe.throw(message, frappe.ValidationError, _("Table Fieldname Missing"))
 
 def validate_fields_for_doctype(doctype):
 	meta = frappe.get_meta(doctype, cached=False)
@@ -915,7 +976,7 @@ def validate_fields(meta):
 		for field in depends_on_fields:
 			depends_on = docfield.get(field, None)
 			if depends_on and ("=" in depends_on) and \
-				re.match("""[\w\.:_]+\s*={1}\s*[\w\.@'"]+""", depends_on):
+				re.match(r'[\w\.:_]+\s*={1}\s*[\w\.@\'"]+', depends_on):
 				frappe.throw(_("Invalid {0} condition").format(frappe.unscrub(field)), frappe.ValidationError)
 
 	def check_table_multiselect_option(docfield):
@@ -1174,11 +1235,19 @@ def make_module_and_roles(doc, perm_fieldname="permissions"):
 		else:
 			raise
 
-def check_if_fieldname_conflicts_with_methods(doctype, fieldname):
-	doc = frappe.get_doc({"doctype": doctype})
-	method_list = [method for method in dir(doc) if isinstance(method, str) and callable(getattr(doc, method))]
+def check_fieldname_conflicts(doctype, fieldname):
+	"""Checks if fieldname conflicts with methods or properties"""
 
-	if fieldname in method_list:
+	doc = frappe.get_doc({"doctype": doctype})
+	available_objects = [x for x in dir(doc) if isinstance(x, str)]
+	property_list = [
+		x for x in available_objects if isinstance(getattr(type(doc), x, None), property)
+	]
+	method_list = [
+		x for x in available_objects if x not in property_list and callable(getattr(doc, x))
+	]
+
+	if fieldname in method_list + property_list:
 		frappe.throw(_("Fieldname {0} conflicting with meta object").format(fieldname))
 
 def clear_linked_doctype_cache():

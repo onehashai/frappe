@@ -1,15 +1,16 @@
-from __future__ import unicode_literals
-
 import re
-import frappe
+from typing import List, Tuple, Union
+
 import psycopg2
 import psycopg2.extensions
 from six import string_types
-from frappe.utils import cstr
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.errorcodes import STRING_DATA_RIGHT_TRUNCATION
 
+import frappe
 from frappe.database.database import Database
 from frappe.database.postgres.schema import PostgresTable
+from frappe.utils import cstr, get_table_name
 
 # cast decimals as floats
 DEC2FLOAT = psycopg2.extensions.new_type(
@@ -32,11 +33,11 @@ class PostgresDatabase(Database):
 	def setup_type_map(self):
 		self.db_type = 'postgres'
 		self.type_map = {
-			'Currency':		('decimal', '18,6'),
+			'Currency':		('decimal', '21,9'),
 			'Int':			('bigint', None),
 			'Long Int':		('bigint', None),
-			'Float':		('decimal', '18,6'),
-			'Percent':		('decimal', '18,6'),
+			'Float':		('decimal', '21,9'),
+			'Percent':		('decimal', '21,9'),
 			'Check':		('smallint', None),
 			'Small Text':	('text', ''),
 			'Long Text':	('text', ''),
@@ -61,11 +62,11 @@ class PostgresDatabase(Database):
 			'Color':		('varchar', self.VARCHAR_LEN),
 			'Barcode':		('text', ''),
 			'Geolocation':	('text', ''),
-			'Duration':		('decimal', '18,6')
+			'Duration':		('decimal', '21,9'),
+			'Icon':			('varchar', self.VARCHAR_LEN)
 		}
 
 	def get_connection(self):
-		# warnings.filterwarnings('ignore', category=psycopg2.Warning)
 		conn = psycopg2.connect("host='{}' dbname='{}' user='{}' password='{}' port={}".format(
 			self.host, self.user, self.user, self.password, self.port
 		))
@@ -172,7 +173,20 @@ class PostgresDatabase(Database):
 
 	@staticmethod
 	def is_data_too_long(e):
-		return e.pgcode == '22001'
+		return e.pgcode == STRING_DATA_RIGHT_TRUNCATION
+
+	def rename_table(self, old_name: str, new_name: str) -> Union[List, Tuple]:
+		old_name = get_table_name(old_name)
+		new_name = get_table_name(new_name)
+		return self.sql(f"ALTER TABLE `{old_name}` RENAME TO `{new_name}`")
+
+	def describe(self, doctype: str)-> Union[List, Tuple]:
+		table_name = get_table_name(doctype)
+		return self.sql(f"SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME = '{table_name}'")
+
+	def change_column_type(self, table: str, column: str, type: str) -> Union[List, Tuple]:
+		table_name = get_table_name(table)
+		return self.sql(f'ALTER TABLE "{table_name}" ALTER COLUMN "{column}" TYPE {type}')
 
 	def create_auth_table(self):
 		self.sql_ddl("""create table if not exists "__Auth" (
@@ -301,6 +315,7 @@ class PostgresDatabase(Database):
 def modify_query(query):
 	""""Modifies query according to the requirements of postgres"""
 	# replace ` with " for definitions
+	query = str(query)
 	query = query.replace('`', '"')
 	query = replace_locate_with_strpos(query)
 	# select from requires ""

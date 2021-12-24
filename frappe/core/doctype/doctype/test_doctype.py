@@ -92,7 +92,7 @@ class TestDocType(unittest.TestCase):
 			fields=["parent", "depends_on", "collapsible_depends_on", "mandatory_depends_on",\
 				"read_only_depends_on", "fieldname", "fieldtype"])
 
-		pattern = """[\w\.:_]+\s*={1}\s*[\w\.@'"]+"""
+		pattern = r'[\w\.:_]+\s*={1}\s*[\w\.@\'"]+'
 		for field in docfields:
 			for depends_on in ["depends_on", "collapsible_depends_on", "mandatory_depends_on", "read_only_depends_on"]:
 				condition = field.get(depends_on)
@@ -373,7 +373,7 @@ class TestDocType(unittest.TestCase):
 		for data in link_doc.get('permissions'):
 			data.submit = 1
 			data.cancel = 1
-		link_doc.insert()
+		link_doc.insert(ignore_if_duplicate=True)
 
 		#create first parent doctype
 		test_doc_1 = new_doctype('Test Doctype 1')
@@ -388,7 +388,7 @@ class TestDocType(unittest.TestCase):
 		for data in test_doc_1.get('permissions'):
 			data.submit = 1
 			data.cancel = 1
-		test_doc_1.insert()
+		test_doc_1.insert(ignore_if_duplicate=True)
 
 		#crete second parent doctype
 		doc = new_doctype('Test Doctype 2')
@@ -403,7 +403,7 @@ class TestDocType(unittest.TestCase):
 		for data in link_doc.get('permissions'):
 			data.submit = 1
 			data.cancel = 1
-		doc.insert()
+		doc.insert(ignore_if_duplicate=True)
 
 		# create doctype data
 		data_link_doc_1 = frappe.new_doc('Test Linked Doctype 1')

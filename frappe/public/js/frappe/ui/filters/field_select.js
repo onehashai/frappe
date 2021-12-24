@@ -36,18 +36,6 @@ frappe.ui.FieldSelect = Class.extend({
 			var item = me.awesomplete.get_item(value);
 			me.$input.val(item.label);
 		});
-		this.$input.on("awesomplete-open", () => {
-			let modal = this.$input.parents('.modal-dialog')[0];
-			if (modal) {
-				$(modal).removeClass("modal-dialog-scrollable");
-			}
-		});
-		this.$input.on("awesomplete-close", () => {
-			let modal = this.$input.parents('.modal-dialog')[0];
-			if (modal) {
-				$(modal).addClass("modal-dialog-scrollable");
-			}
-		});
 
 		if(this.filter_fields) {
 			for(var i in this.filter_fields)
@@ -124,8 +112,11 @@ frappe.ui.FieldSelect = Class.extend({
 		// main table
 		var main_table_fields = std_filters.concat(frappe.meta.docfield_list[me.doctype]);
 		$.each(frappe.utils.sort(main_table_fields, "label", "string"), function(i, df) {
+			let doctype = frappe.get_meta(me.doctype).istable && me.parent_doctype ? 
+				me.parent_doctype : me.doctype;
+			
 			// show fields where user has read access and if report hide flag is not set
-			if(frappe.perm.has_perm(me.doctype, df.permlevel, "read"))
+			if (frappe.perm.has_perm(doctype, df.permlevel, "read"))
 				me.add_field_option(df);
 		});
 
@@ -141,8 +132,11 @@ frappe.ui.FieldSelect = Class.extend({
 				}
 
 				$.each(frappe.utils.sort(child_table_fields, "label", "string"), function(i, df) {
+					let doctype = frappe.get_meta(me.doctype).istable && me.parent_doctype ? 
+						me.parent_doctype : me.doctype;
+					
 					// show fields where user has read access and if report hide flag is not set
-					if(frappe.perm.has_perm(me.doctype, df.permlevel, "read"))
+					if (frappe.perm.has_perm(doctype, df.permlevel, "read"))
 						me.add_field_option(df);
 				});
 			}

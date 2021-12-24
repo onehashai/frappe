@@ -130,11 +130,13 @@ export default class WebForm extends frappe.ui.FieldGroup {
 	// b24b33eb3d7d1e8d
 
 	setup_delete_button() {
-		this.add_button_to_header(
-			frappe.utils.icon('delete'),
-			"danger",
-			() => this.delete()
-		);
+		frappe.has_permission(this.doc_type, "", "delete", () => {
+			this.add_button_to_header(
+				frappe.utils.icon('delete'),
+				"danger",
+				() => this.delete()
+			);
+		});
 	}
 
 	setup_print_button() {
@@ -184,12 +186,12 @@ export default class WebForm extends frappe.ui.FieldGroup {
 					frappe.web_form.events.trigger('after_save');
 					this.after_save && this.after_save();
 					// args doctype and docname added to link doctype in file manager
-					if (is_new) {
+					if (is_new && (response.message.attachment || response.message.file)) {
 						frappe.call({
 							type: 'POST',
 							method: "frappe.handler.upload_file",
 							args: {
-								file_url: response.message.attachment,
+								file_url: response.message.attachment || response.message.file,
 								doctype: response.message.doctype,
 								docname: response.message.name
 							}
