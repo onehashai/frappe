@@ -521,8 +521,8 @@ def prepare_message(email, recipient, recipients_list):
 		# Using SSL => Publically available domain => Email Read Reciept Possible
 		# b24b33eb3d7d1e8d
 		cur_site = frappe.local.site
-		if frappe.local.site == "admin_onehash":
-			cur_site = "admin.onehash.ai"
+		if frappe.local.site == (frappe.conf.get("master_site_name") or "admin_onehash"):
+			cur_site = frappe.conf.get("master_site_domain") or "app.onehash.ai"
 		message = message.replace("<!--email open check-->", quopri.encodestring('<img src="https://{}/api/method/journeys.journeys.email_read.mark_email_as_seen?name={}&queue={}&recipient={}"/>'.format(cur_site, email.communication, email.name, recipient).encode()).decode())
 		# b24b33eb3d7d1e8d
 	else:
