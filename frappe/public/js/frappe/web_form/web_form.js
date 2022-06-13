@@ -240,7 +240,7 @@ export default class WebForm extends frappe.ui.FieldGroup {
 
 		const success_dialog = new frappe.ui.Dialog({
 			title: __("Saved Successfully"),
-			primary_action_label:  "Done",
+			primary_action_label:  __("Done"),
 			primary_action: () => {
 				if (this.success_url) {
 					if (this.is_embeddable){
