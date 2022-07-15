@@ -11,7 +11,7 @@ from frappe.email.smtp import SMTPServer, get_outgoing_email_account
 from frappe.email.email_body import get_email, get_formatted_html, add_attachment
 from frappe.utils.verified_command import get_signed_params, verify_request
 from html2text import html2text
-from frappe.utils import get_url, nowdate, now_datetime, add_days, split_emails, cstr, cint
+from frappe.utils import get_url, nowdate, now_datetime, add_days, split_emails, cstr, cint, call_hook_method
 from rq.timeouts import JobTimeoutException
 from six import text_type, string_types, PY3
 from email.parser import Parser
@@ -76,7 +76,7 @@ def send(recipients=None, sender=None, subject=None, message=None, text_content=
 	email_account = get_outgoing_email_account(True, append_to=reference_doctype, sender=sender)
 	if not sender or sender == "Administrator":
 		sender = email_account.default_sender
-
+	call_hook_method("check_email_limit",recipients=recipients,sender=sender)
 	if not text_content:
 		try:
 			text_content = html2text(message)
