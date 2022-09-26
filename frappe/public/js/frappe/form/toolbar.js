@@ -272,8 +272,16 @@ frappe.ui.form.Toolbar = class Toolbar {
 				new frappe.views.WhatsAppComposer();
 			}, true)
 		}
-		// b24b33eb3d7d1e8d
 
+		// Start WhatsApp :No need to create Bussiness accout]
+		if(frappe.model.can_email(null, me.frm) && me.frm.doc.docstatus < 2){
+			this.page.add_menu_item(__('WhatsApp Web'), function () {
+				new frappe.views.WhatsAppdialogComposer();
+			}, true)
+		}
+
+		// End WhatsApp : No need to create Bussiness accout]
+		
 		// go to field modal
 		this.page.add_menu_item(__("Jump to field"), function() {
 			me.show_jump_to_field_dialog();

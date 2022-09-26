@@ -9,6 +9,8 @@ frappe.ui.misc.about = function() {
 			Website: <a href='https://onehash.ai' target='_blank'>https://onehash.ai</a></p>\
 		<p><i class='fa fa-envelope fa-fw'></i>\
 			Email: <a href='mailto:support@onehash.ai' target='_blank'>support@onehash.ai</a></p>\
+		<p><i class='fa fa-legal fa-fw'></i>\
+			<a href='https://www.onehash.ai/legal/terms-of-services' target='_blank'>Terms Of Service</a></p>\
 		<hr>\
 		<h4>Installed Apps</h4>\
 		<div id='about-app-versions'>Loading versions...</div>\
