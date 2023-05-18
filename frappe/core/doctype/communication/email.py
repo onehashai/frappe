@@ -15,6 +15,7 @@ import frappe.email.smtp
 import time
 from frappe import _
 from frappe.utils.background_jobs import enqueue
+from journeys.limits import get_usage_info
 
 @frappe.whitelist()
 def make(doctype=None, name=None, content=None, subject=None, sent_or_received = "Sent",
@@ -134,6 +135,18 @@ def notify(doc, print_html=None, print_format=None, attachments=None,
 
 	doc.emails_not_sent_to = set(doc.all_email_addresses) - set(doc.sent_email_addresses)
 
+	if doc.sender!=='alert@onehash.ai':
+		usage_info = get_usage_info()
+		emails_sent = usage_info.emails_sent
+		email_limit = usage_info.limits.emails
+		frappe.log_error(emails_sent,"Emails_sent")
+		frappe.log_error(email_limit,"Email limit")
+		if (email_limit - emails_sent) <= 0:
+			frappe.throw("Maximum number of emails sent: {} out of {} this month.".format(emails_sent, email_limit))
+
+	if(len(recipients)>100 or len(cc)>100 or len(bcc)>100 and doc.sender=='alert@onehash.ai'):
+		frappe.throw("The maximum limit for recipients, cc or bcc in an email is 100 each.")
+
 	if frappe.flags.in_test:
 		# for test cases, run synchronously
 		doc._notify(print_html=print_html, print_format=print_format, attachments=attachments,
@@ -169,7 +182,7 @@ def _notify(doc, print_html=None, print_format=None, attachments=None,
 		attachments=doc.attachments,
 		message_id=doc.message_id,
 		unsubscribe_message=unsubscribe_message,
-		delayed=True,
+		delayed=False,
 		communication=doc.name,
 		read_receipt=doc.read_receipt,
 		is_notification=True if doc.sent_or_received =="Received" else False,

@@ -39,9 +39,8 @@ def get_scheduled_backup_limit():
 def cleanup_old_backups(site_path, files, limit):
 	backup_paths = []
 	for f in files:
-		if f.endswith('sql.gz'):
-			_path = os.path.abspath(os.path.join(site_path, f))
-			backup_paths.append(_path)
+		_path = os.path.abspath(os.path.join(site_path, f))
+		backup_paths.append(_path)
 
 	backup_paths = sorted(backup_paths, key=os.path.getctime)
 	files_to_delete = len(backup_paths) - limit
@@ -57,8 +56,10 @@ def delete_downloadable_backups():
 	files = [x for x in os.listdir(path) if os.path.isfile(os.path.join(path, x))]
 	backup_limit = get_scheduled_backup_limit()
 
-	if len(files) > backup_limit:
+	# if len(files) > backup_limit:
+	if len(files) > 2:
 		cleanup_old_backups(path, files, backup_limit)
+	# schedule_files_backupdb()
 
 @frappe.whitelist()
 def schedule_files_backup(user_email):
@@ -71,6 +72,11 @@ def schedule_files_backup(user_email):
 		frappe.msgprint(_("Queued for backup. You will receive an email with the download link"))
 	else:
 		frappe.msgprint(_("Backup job is already queued. You will receive an email with the download link"))
+
+@frappe.whitelist()
+def schedule_files_backupdb():
+	from frappe.utils.backups import backup
+	backup_files = backup(with_files=True)
 
 def backup_files_and_notify_user(user_email=None):
 	from frappe.utils.backups import backup
