@@ -560,8 +560,8 @@ class Email:
 
 
 # fix due to a python bug in poplib that limits it to 2048
-poplib._MAXLINE = 20480
-imaplib._MAXLINE = 20480
+poplib._MAXLINE = 20480000
+imaplib._MAXLINE = 20480000
 
 class TimerMixin(object):
 	def __init__(self, *args, **kwargs):
