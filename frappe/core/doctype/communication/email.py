@@ -135,7 +135,7 @@ def notify(doc, print_html=None, print_format=None, attachments=None,
 
 	doc.emails_not_sent_to = set(doc.all_email_addresses) - set(doc.sent_email_addresses)
 
-	if doc.sender!=='alert@onehash.ai':
+	if doc.sender!='alert@onehash.ai':
 		usage_info = get_usage_info()
 		emails_sent = usage_info.emails_sent
 		email_limit = usage_info.limits.emails
