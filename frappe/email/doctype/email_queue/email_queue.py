@@ -323,9 +323,7 @@ class SendMailContext:
 			"reference_doctype": self.queue_doc.reference_doctype,
 			"communication_name": self.queue_doc.communication,
 		}
-		if self.queue_doc.reference_doctype == "Newsletter":
-			tracker_url = f"{get_url()}/api/method/frappe.email.doctype.newsletter.newsletter.newsletter_email_read?{get_signed_params(params)}"
-		else:
+		if self.queue_doc.communication:
 			tracker_url = f"{get_url()}/api/method/frappe.core.doctype.communication.email.mark_email_as_seen?{get_signed_params(params)}"
 
 		if tracker_url:

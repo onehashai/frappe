@@ -429,21 +429,14 @@ def send_scheduled_email():
 
 	frappe.flags.is_scheduler_running = False
 
-frappe.utils.logger.set_log_level("DEBUG")
-logger = frappe.logger("api", allow_site=True, file_count=50)
 
 @frappe.whitelist(allow_guest=True)
 def newsletter_email_read(recipient_email=None, reference_doctype=None, reference_name=None):
-	from werkzeug.wrappers import Response
-	logger.info("1")
 	if not (recipient_email and reference_name):
 		return
-	logger.info("2")
 	verify_request()
-	logger.info("3")
 	try:
 		doc = frappe.get_cached_doc("Newsletter", reference_name)
-		logger.info(f"doc {doc}")
 		if doc.add_viewed(recipient_email, force=True, unique_views=True):
 			newsletter = frappe.qb.DocType("Newsletter")
 			(
@@ -460,14 +453,8 @@ def newsletter_email_read(recipient_email=None, reference_doctype=None, referenc
 		)
 
 	finally:
-		pixel = b"GIF89a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+		frappe.response.update(frappe.utils.get_imaginary_pixel_response())
 
-		response = Response()
-		response.mimetype = "image/gif"
-		response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-		response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
-		response.data = pixel
-		return response
 
 def get_default_email_group():
 	return _("Website", lang=frappe.db.get_default("language"))
