@@ -270,19 +270,48 @@ def add_attachments(name: str, attachments: Iterable[str | dict]) -> None:
 
 
 @frappe.whitelist(allow_guest=True, methods=("GET",))
-def mark_email_as_seen(name: str | None = None):
-	frappe.request.after_response.add(lambda: _mark_email_as_seen(name))
-	frappe.response.update(frappe.utils.get_imaginary_pixel_response())
+def mark_email_as_seen(recipient_email: str, reference_name: str, reference_doctype: str, communication_name: str | None = None):  
+	from werkzeug.wrappers import Response
+	frappe.request.after_response.add(lambda: _mark_email_as_opened(recipient_email, communication_name))
+	pixel = b"GIF89a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
 
+	response = Response()
+	response.mimetype = "image/gif"
+	response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+	response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
+	response.data = pixel
+	return response
 
-def _mark_email_as_seen(name):
+def _mark_email_as_opened(recipient_email, communication_name):
 	try:
-		update_communication_as_read(name)
-	except Exception:
-		frappe.log_error("Unable to mark as seen", None, "Communication", name)
+		update_email_insights(recipient_email, communication_name)
 
-	frappe.db.commit()  # nosemgrep: after_response requires explicit commit
+	except Exception as e:
+		frappe.log_error(f"Failed to mark email as seen: {str(e)}", "Email Tracking")
+    
+def update_email_insights(recipient_email, communication_name):
+	from frappe.utils import now_datetime
 
+	current_time = now_datetime()
+	formatted_time = current_time.strftime("%d-%m-%Y %I:%M %p")
+	doc = frappe.get_doc('Communication', communication_name)
+	found = False
+	for child in doc.all_emails:
+		if child.get('email') == recipient_email:
+			child.opened += 1
+			child.opened_at += '\n' + formatted_time
+			found = True
+			break
+
+	if not found:
+		doc.append("all_emails", {
+			"email": recipient_email,
+			"opened": 1,
+			"opened_at": formatted_time,
+		})
+
+	doc.save()
+	frappe.db.commit()
 
 def update_communication_as_read(name):
 	if not name or not isinstance(name, str):

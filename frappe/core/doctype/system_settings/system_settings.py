@@ -164,6 +164,9 @@ class SystemSettings(Document):
 		if not self.backup_limit or self.backup_limit < 1:
 			frappe.msgprint(_("Number of backups must be greater than zero."), alert=True)
 			self.backup_limit = 1
+		if self.backup_limit > 3:
+			frappe.msgprint(_("Number of backups must be less than four."), alert=True)
+			self.backup_limit = 3
 
 	def validate_file_extensions(self):
 		if not self.allowed_file_extensions:

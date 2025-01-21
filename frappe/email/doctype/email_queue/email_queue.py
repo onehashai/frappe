@@ -316,22 +316,17 @@ class SendMailContext:
 		return message
 
 	def get_tracker_str(self, recipient_email) -> str:
-		tracker_url = ""
-		if self.queue_doc.get("email_read_tracker_url"):
-			email_read_tracker_url = self.queue_doc.email_read_tracker_url
-			params = {
-				"recipient_email": recipient_email,
-				"reference_name": self.queue_doc.reference_name,
-				"reference_doctype": self.queue_doc.reference_doctype,
-			}
-			tracker_url = get_url(f"{email_read_tracker_url}?{get_signed_params(params)}")
-
-		elif (
-			self.email_account_doc
-			and self.email_account_doc.track_email_status
-			and self.queue_doc.communication
-		):
-			tracker_url = f"{get_url()}/api/method/frappe.core.doctype.communication.email.mark_email_as_seen?name={self.queue_doc.communication}"
+		tracker_url=""
+		params = {
+			"recipient_email": recipient_email,
+			"reference_name": self.queue_doc.reference_name,
+			"reference_doctype": self.queue_doc.reference_doctype,
+			"communication_name": self.queue_doc.communication,
+		}
+		if self.queue_doc.reference_doctype == "Newsletter":
+			tracker_url = f"{get_url()}/api/method/frappe.email.doctype.newsletter.newsletter.newsletter_email_read?{get_signed_params(params)}"
+		else:
+			tracker_url = f"{get_url()}/api/method/frappe.core.doctype.communication.email.mark_email_as_seen?{get_signed_params(params)}"
 
 		if tracker_url:
 			tracker_url_html = f'<img src="{tracker_url}"/>'
