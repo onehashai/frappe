@@ -310,7 +310,7 @@ def update_email_insights(recipient_email, communication_name):
 			"opened_at": formatted_time,
 		})
 
-	doc.save()
+	doc.save(ignore_permissions=True)
 	frappe.db.commit()
 
 def update_communication_as_read(name):
