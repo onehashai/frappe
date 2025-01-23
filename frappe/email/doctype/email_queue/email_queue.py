@@ -326,6 +326,9 @@ class SendMailContext:
 		if self.queue_doc.communication:
 			tracker_url = f"{get_url()}/api/method/frappe.core.doctype.communication.email.mark_email_as_seen?{get_signed_params(params)}"
 
+		elif self.queue_doc.reference_doctype == "Newsletter":
+			tracker_url = f"{get_url()}/api/method/frappe.email.doctype.newsletter.newsletter.newsletter_email_read?{get_signed_params(params)}"
+
 		if tracker_url:
 			tracker_url_html = f'<img src="{tracker_url}"/>'
 			return quopri.encodestring(tracker_url_html.encode()).decode()

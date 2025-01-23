@@ -432,18 +432,20 @@ def send_scheduled_email():
 
 @frappe.whitelist(allow_guest=True)
 def newsletter_email_read(recipient_email=None, reference_doctype=None, reference_name=None):
+	from werkzeug.wrappers import Response
+
 	if not (recipient_email and reference_name):
 		return
 	verify_request()
 	try:
 		doc = frappe.get_cached_doc("Newsletter", reference_name)
-		if doc.add_viewed(recipient_email, force=True, unique_views=True):
-			newsletter = frappe.qb.DocType("Newsletter")
-			(
-				frappe.qb.update(newsletter)
-				.set(newsletter.total_views, newsletter.total_views + 1)
-				.where(newsletter.name == doc.name)
-			).run()
+		# if doc.add_viewed(recipient_email, force=True, unique_views=True):
+		newsletter = frappe.qb.DocType("Newsletter")
+		(
+			frappe.qb.update(newsletter)
+			.set(newsletter.total_views, newsletter.total_views + 1)
+			.where(newsletter.name == doc.name)
+		).run()
 
 	except Exception:
 		frappe.log_error(
@@ -453,8 +455,14 @@ def newsletter_email_read(recipient_email=None, reference_doctype=None, referenc
 		)
 
 	finally:
-		frappe.response.update(frappe.utils.get_imaginary_pixel_response())
+		pixel = b"GIF89a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
 
+		response = Response()
+		response.mimetype = "image/gif"
+		response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+		response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
+		response.data = pixel
+		return response
 
 def get_default_email_group():
 	return _("Website", lang=frappe.db.get_default("language"))
