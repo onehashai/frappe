@@ -432,8 +432,6 @@ def send_scheduled_email():
 
 @frappe.whitelist(allow_guest=True)
 def newsletter_email_read(recipient_email=None, reference_doctype=None, reference_name=None):
-	from werkzeug.wrappers import Response
-
 	if not (recipient_email and reference_name):
 		return
 	verify_request()
@@ -455,14 +453,8 @@ def newsletter_email_read(recipient_email=None, reference_doctype=None, referenc
 		)
 
 	finally:
-		pixel = b"GIF89a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+		frappe.response.update(frappe.utils.get_imaginary_pixel_response())
 
-		response = Response()
-		response.mimetype = "image/gif"
-		response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-		response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
-		response.data = pixel
-		return response
 
 def get_default_email_group():
 	return _("Website", lang=frappe.db.get_default("language"))
