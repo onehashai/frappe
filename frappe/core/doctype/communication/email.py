@@ -285,7 +285,7 @@ def mark_email_as_seen(recipient_email: str, reference_name: str, reference_doct
 def _mark_email_as_opened(recipient_email, reference_name, reference_doctype, communication_name):
 	try:
 		update_communication(recipient_email, communication_name)
-		if reference_doctype == "Email+Campaign":
+		if reference_doctype == "Email Campaign":
 			update_email_campaign(recipient_email, reference_name)
 
 	except Exception as e:
